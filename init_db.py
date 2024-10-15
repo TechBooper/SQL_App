@@ -1,19 +1,16 @@
-# init_db.py
-
 import sqlite3
 import getpass
-
 from auth import create_user
 
 def initialize_database():
-    # Initialize the database schema
+    # Initialize the database schema from schema.sql
     with sqlite3.connect('app.db') as conn:
         cursor = conn.cursor()
         with open('schema.sql', 'r') as f:
             cursor.executescript(f.read())
     print("Database initialized successfully.")
 
-    # Insert default roles
+    # Insert default roles into the roles table
     with sqlite3.connect('app.db') as conn:
         cursor = conn.cursor()
         roles = ['Management', 'Sales', 'Support']
@@ -25,7 +22,7 @@ def initialize_database():
         conn.commit()
     print("Default roles inserted.")
 
-    # Create admin user
+    # Create the admin user with the 'Management' role
     admin_username = input("Enter admin username: ")
     admin_password = getpass.getpass("Enter admin password: ")
 
@@ -40,6 +37,66 @@ def initialize_database():
             print(f"Admin user '{admin_username}' created.")
         else:
             print("Error: 'Management' role not found.")
+    
+    # Optionally, insert default permissions
+    insert_default_permissions()
+
+def insert_default_permissions():
+    # Insert default permissions for each role
+    with sqlite3.connect('app.db') as conn:
+        cursor = conn.cursor()
+
+        # Permissions for Management
+        management_permissions = [
+            ('Management', 'client', 'create'),
+            ('Management', 'client', 'update'),
+            ('Management', 'contract', 'create'),
+            ('Management', 'contract', 'update'),
+            ('Management', 'event', 'create'),
+            ('Management', 'event', 'update')
+        ]
+
+        # Permissions for Sales
+        sales_permissions = [
+            ('Sales', 'client', 'create'),
+            ('Sales', 'client', 'update'),
+            ('Sales', 'contract', 'create'),
+            ('Sales', 'contract', 'update'),
+            ('Sales', 'event', 'create')
+        ]
+
+        # Permissions for Support
+        support_permissions = [
+            ('Support', 'event', 'read'),
+            ('Support', 'event', 'update')
+        ]
+
+        # Insert Management Permissions
+        for role, entity, action in management_permissions:
+            cursor.execute("""
+                INSERT INTO permissions (role_id, entity, action)
+                SELECT roles.id, ?, ?
+                FROM roles
+                WHERE roles.name = ?""", (entity, action, role))
+        
+        # Insert Sales Permissions
+        for role, entity, action in sales_permissions:
+            cursor.execute("""
+                INSERT INTO permissions (role_id, entity, action)
+                SELECT roles.id, ?, ?
+                FROM roles
+                WHERE roles.name = ?""", (entity, action, role))
+        
+        # Insert Support Permissions
+        for role, entity, action in support_permissions:
+            cursor.execute("""
+                INSERT INTO permissions (role_id, entity, action)
+                SELECT roles.id, ?, ?
+                FROM roles
+                WHERE roles.name = ?""", (entity, action, role))
+
+        conn.commit()
+    print("Default permissions inserted.")
 
 if __name__ == "__main__":
     initialize_database()
