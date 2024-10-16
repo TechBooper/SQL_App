@@ -59,14 +59,15 @@ def get_user_role(user_id):
         logging.error(f"Unexpected error retrieving role for user ID {user_id}: {e}")
         return None
 
-def create_user(username, password, role_id):
+# Updated create_user function to accept and store the email
+def create_user(username, password, role_id, email):
     try:
         password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         with sqlite3.connect('app.db') as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "INSERT INTO users (username, password_hash, role_id) VALUES (?, ?, ?)",
-                (username, password_hash, role_id)
+                "INSERT INTO users (username, password_hash, role_id, email) VALUES (?, ?, ?, ?)",  # Added email to the SQL query
+                (username, password_hash, role_id, email)  # Added email as an argument
             )
             conn.commit()
             logging.info(f"User {username} created successfully with role ID {role_id}.")

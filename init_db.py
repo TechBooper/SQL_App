@@ -24,6 +24,7 @@ def initialize_database():
 
     # Create the admin user with the 'Management' role
     admin_username = input("Enter admin username: ")
+    admin_email = input("Enter admin email: ")  # Added email prompt
     admin_password = getpass.getpass("Enter admin password: ")
 
     # Get role_id for 'Management'
@@ -33,7 +34,7 @@ def initialize_database():
         role = cursor.fetchone()
         if role:
             role_id = role[0]
-            create_user(admin_username, admin_password, role_id)
+            create_user(admin_username, admin_password, role_id, admin_email)  # Pass email to create_user
             print(f"Admin user '{admin_username}' created.")
         else:
             print("Error: 'Management' role not found.")
