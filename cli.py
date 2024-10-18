@@ -1,30 +1,48 @@
+# CLI.py
+
 import argparse
 import sys
 import getpass
+import logging
 from auth import authenticate, get_user_role
-from profile import view_profile, update_profile
-from controllers import create_client, update_contract, view_contracts, has_permission
+from controllers import (
+    create_client,
+    update_contract,
+    update_event,
+    create_event,
+    assign_support_to_event,
+    get_all_clients,
+    get_all_contracts,
+    get_all_events,
+)
+from models import User, Role
+from permissions import has_permission
 import sentry_setup
 
+logging.basicConfig(
+    filename='cli.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
 def main():
-    parser = argparse.ArgumentParser(description="Application CLI")
+    parser = argparse.ArgumentParser(description="Epic Events CRM CLI")
     subparsers = parser.add_subparsers(dest='command')
 
     # Login Command
     login_parser = subparsers.add_parser('login')
     login_parser.add_argument('username')
 
-    # Additional Commands as Needed...
-
     args = parser.parse_args()
     session = {}
 
     if args.command == 'login':
         password = getpass.getpass("Password: ")
-        user = authenticate(args.username, password)
-        if user:
-            session['user_id'] = user['user_id']
-            session['role'] = get_user_role(user['user_id'])
+        user_info = authenticate(args.username, password)
+        if user_info:
+            session['user_id'] = user_info['user_id']
+            session['role_id'] = user_info['role_id']
+            session['role'] = get_user_role(user_info['user_id'])
             print(f"Logged in as {args.username} with role {session['role']}.")
 
             # Start interactive session
@@ -53,16 +71,18 @@ def interactive_session(session):
                 print("  update_profile <bio>")
                 print("  create_client <first_name> <last_name> <email> <phone> <company_name>")
                 print("  update_contract <contract_id> <total_amount> <amount_remaining> <status>")
+                print("  create_event <contract_id> <event_date_start> <event_date_end> <location> <attendees> <notes>")
+                print("  assign_support <event_id> <support_user_id>")
+                print("  view_clients")
                 print("  view_contracts")
+                print("  view_events")
                 print("  logout")
             elif command == 'view_profile':
-                view_profile(session['user_id'])
+                # Implement view_profile function or adjust as needed
+                pass
             elif command == 'update_profile':
-                if len(command_parts) > 1:
-                    bio = ' '.join(command_parts[1:])
-                    update_profile(session['user_id'], bio)
-                else:
-                    print("Usage: update_profile <bio>")
+                # Implement update_profile function or adjust as needed
+                pass
             elif command == 'create_client':
                 if len(command_parts) >= 6:
                     first_name = command_parts[1]
@@ -70,10 +90,15 @@ def interactive_session(session):
                     email = command_parts[3]
                     phone = command_parts[4]
                     company_name = ' '.join(command_parts[5:])
-                    if has_permission(session['user_id'], 'client', 'create'):
-                        create_client(session['user_id'], first_name, last_name, email, phone, company_name)
-                    else:
-                        print("You do not have permission to create clients.")
+                    result = create_client(
+                        session['user_id'],
+                        first_name,
+                        last_name,
+                        email,
+                        phone,
+                        company_name
+                    )
+                    print(result)
                 else:
                     print("Usage: create_client <first_name> <last_name> <email> <phone> <company_name>")
             elif command == 'update_contract':
@@ -82,21 +107,65 @@ def interactive_session(session):
                     total_amount = float(command_parts[2])
                     amount_remaining = float(command_parts[3])
                     status = command_parts[4]
-                    if has_permission(session['user_id'], 'contract', 'update'):
-                        update_contract(session['user_id'], contract_id, total_amount, amount_remaining, status)
-                    else:
-                        print("You do not have permission to update contracts.")
+                    result = update_contract(
+                        session['user_id'],
+                        contract_id,
+                        total_amount,
+                        amount_remaining,
+                        status
+                    )
+                    print(result)
                 else:
                     print("Usage: update_contract <contract_id> <total_amount> <amount_remaining> <status>")
-            elif command == 'view_contracts':
-                if has_permission(session['user_id'], 'contract', 'read'):
-                    view_contracts(session['user_id'])
+            elif command == 'create_event':
+                if len(command_parts) >= 7:
+                    contract_id = int(command_parts[1])
+                    event_date_start = command_parts[2]
+                    event_date_end = command_parts[3]
+                    location = command_parts[4]
+                    attendees = int(command_parts[5])
+                    notes = ' '.join(command_parts[6:])
+                    result = create_event(
+                        session['user_id'],
+                        contract_id,
+                        event_date_start,
+                        event_date_end,
+                        location,
+                        attendees,
+                        notes
+                    )
+                    print(result)
                 else:
-                    print("You do not have permission to view contracts.")
+                    print("Usage: create_event <contract_id> <event_date_start> <event_date_end> <location> <attendees> <notes>")
+            elif command == 'assign_support':
+                if len(command_parts) == 3:
+                    event_id = int(command_parts[1])
+                    support_user_id = int(command_parts[2])
+                    result = assign_support_to_event(
+                        session['user_id'],
+                        event_id,
+                        support_user_id
+                    )
+                    print(result)
+                else:
+                    print("Usage: assign_support <event_id> <support_user_id>")
+            elif command == 'view_clients':
+                clients = get_all_clients()
+                for client in clients:
+                    print(client)
+            elif command == 'view_contracts':
+                contracts = get_all_contracts()
+                for contract in contracts:
+                    print(contract)
+            elif command == 'view_events':
+                events = get_all_events()
+                for event in events:
+                    print(event)
             else:
                 print("Unknown command. Type 'help' to see available commands.")
         except Exception as e:
             sentry_setup.capture_exception(e)
+            logging.error(f"An error occurred: {e}")
             print("An error occurred while processing your command.")
 
 if __name__ == "__main__":
@@ -104,4 +173,5 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         sentry_setup.capture_exception(e)
+        logging.error(f"An unexpected error occurred: {e}")
         print("An unexpected error occurred.")

@@ -1,77 +1,433 @@
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Date, Float, Boolean
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+# models.py
 
-Base = declarative_base()
+import sqlite3
+import logging
+from datetime import datetime
 
-# Database setup
-engine = create_engine('sqlite:///app.db')
-Session = sessionmaker(bind=engine)
+logging.basicConfig(
+    filename='models.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+class Database:
+    DB_NAME = 'app.db'
+
+    @staticmethod
+    def connect():
+        conn = sqlite3.connect(Database.DB_NAME)
+        conn.row_factory = sqlite3.Row
+        return conn
 
 # User model
-class User(Base):
-    __tablename__ = 'users'
-    
-    id = Column(Integer, primary_key=True)
-    username = Column(String(50), unique=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
-    role_id = Column(Integer, ForeignKey('roles.id'), nullable=False)
+class User:
+    def __init__(self, id, username, password_hash, role_id, email, created_at=None, updated_at=None):
+        self.id = id
+        self.username = username
+        self.password_hash = password_hash
+        self.role_id = role_id
+        self.email = email
+        self.created_at = created_at
+        self.updated_at = updated_at
 
-    role = relationship("Role")
+    @staticmethod
+    def create(username, password_hash, role_id, email):
+        try:
+            with Database.connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO users (username, password_hash, role_id, email) VALUES (?, ?, ?, ?)",
+                    (username, password_hash, role_id, email)
+                )
+                conn.commit()
+                user_id = cursor.lastrowid
+                logging.info(f"User {username} created with ID {user_id}.")
+                return User.get_by_id(user_id)
+        except sqlite3.Error as e:
+            logging.error(f"Database error in User.create: {e}")
+            return None
+
+    @staticmethod
+    def get_by_username(username):
+        try:
+            conn = Database.connect()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM users WHERE username = ?",
+                (username,)
+            )
+            user_row = cursor.fetchone()
+            if user_row:
+                return User(**user_row)
+            return None
+        except sqlite3.Error as e:
+            logging.error(f"Database error in User.get_by_username: {e}")
+            return None
+        finally:
+            conn.close()
+
+    @staticmethod
+    def get_by_id(user_id):
+        try:
+            conn = Database.connect()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM users WHERE id = ?",
+                (user_id,)
+            )
+            user_row = cursor.fetchone()
+            if user_row:
+                return User(**user_row)
+            return None
+        except sqlite3.Error as e:
+            logging.error(f"Database error in User.get_by_id: {e}")
+            return None
+        finally:
+            conn.close()
+
+    def update(self):
+        try:
+            with Database.connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE users SET username = ?, password_hash = ?, role_id = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    (self.username, self.password_hash, self.role_id, self.email, self.id)
+                )
+                conn.commit()
+                logging.info(f"User {self.username} with ID {self.id} updated.")
+                return True
+        except sqlite3.Error as e:
+            logging.error(f"Database error in User.update: {e}")
+            return False
+
+    def delete(self):
+        try:
+            with Database.connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "DELETE FROM users WHERE id = ?",
+                    (self.id,)
+                )
+                conn.commit()
+                logging.info(f"User {self.username} with ID {self.id} deleted.")
+                return True
+        except sqlite3.Error as e:
+            logging.error(f"Database error in User.delete: {e}")
+            return False
 
 # Role model
-class Role(Base):
-    __tablename__ = 'roles'
-    
-    id = Column(Integer, primary_key=True)
-    name = Column(String(50), nullable=False, unique=True)
+class Role:
+    def __init__(self, id, name):
+        self.id = id
+        self.name = name
+
+    @staticmethod
+    def get_by_id(role_id):
+        try:
+            conn = Database.connect()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM roles WHERE id = ?",
+                (role_id,)
+            )
+            role_row = cursor.fetchone()
+            if role_row:
+                return Role(**role_row)
+            return None
+        except sqlite3.Error as e:
+            logging.error(f"Database error in Role.get_by_id: {e}")
+            return None
+        finally:
+            conn.close()
+
+    @staticmethod
+    def get_by_name(name):
+        try:
+            conn = Database.connect()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM roles WHERE name = ?",
+                (name,)
+            )
+            role_row = cursor.fetchone()
+            if role_row:
+                return Role(**role_row)
+            return None
+        except sqlite3.Error as e:
+            logging.error(f"Database error in Role.get_by_name: {e}")
+            return None
+        finally:
+            conn.close()
 
 # Client model
-class Client(Base):
-    __tablename__ = 'clients'
-    
-    id = Column(Integer, primary_key=True)
-    full_name = Column(String(100), nullable=False)
-    email = Column(String(100), unique=True, nullable=False)
-    phone = Column(String(20), nullable=False)
-    company_name = Column(String(100))
-    first_contact_date = Column(Date)
-    last_update_date = Column(Date)
-    commercial_contact = Column(Integer, ForeignKey('users.id'))  # The user responsible for the client
+class Client:
+    def __init__(self, id, first_name, last_name, email, phone, company_name, date_created, last_contact, sales_contact_id, created_at=None, updated_at=None):
+        self.id = id
+        self.first_name = first_name
+        self.last_name = last_name
+        self.email = email
+        self.phone = phone
+        self.company_name = company_name
+        self.date_created = date_created
+        self.last_contact = last_contact
+        self.sales_contact_id = sales_contact_id
+        self.created_at = created_at
+        self.updated_at = updated_at
 
-    user = relationship("User", back_populates="clients")
+    @staticmethod
+    def create(first_name, last_name, email, phone, company_name, sales_contact_id):
+        try:
+            with Database.connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """INSERT INTO clients (first_name, last_name, email, phone, company_name, sales_contact_id)
+                    VALUES (?, ?, ?, ?, ?, ?)""",
+                    (first_name, last_name, email, phone, company_name, sales_contact_id)
+                )
+                conn.commit()
+                client_id = cursor.lastrowid
+                logging.info(f"Client {email} created with ID {client_id}.")
+                return Client.get_by_id(client_id)
+        except sqlite3.Error as e:
+            logging.error(f"Database error in Client.create: {e}")
+            return None
+
+    @staticmethod
+    def get_by_id(client_id):
+        try:
+            conn = Database.connect()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM clients WHERE id = ?",
+                (client_id,)
+            )
+            client_row = cursor.fetchone()
+            if client_row:
+                return Client(**client_row)
+            return None
+        except sqlite3.Error as e:
+            logging.error(f"Database error in Client.get_by_id: {e}")
+            return None
+        finally:
+            conn.close()
+
+    def update(self):
+        try:
+            with Database.connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """UPDATE clients SET first_name = ?, last_name = ?, email = ?, phone = ?, company_name = ?, last_contact = CURRENT_DATE, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?""",
+                    (self.first_name, self.last_name, self.email, self.phone, self.company_name, self.id)
+                )
+                conn.commit()
+                logging.info(f"Client {self.email} with ID {self.id} updated.")
+                return True
+        except sqlite3.Error as e:
+            logging.error(f"Database error in Client.update: {e}")
+            return False
+
+    def delete(self):
+        try:
+            with Database.connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "DELETE FROM clients WHERE id = ?",
+                    (self.id,)
+                )
+                conn.commit()
+                logging.info(f"Client {self.email} with ID {self.id} deleted.")
+                return True
+        except sqlite3.Error as e:
+            logging.error(f"Database error in Client.delete: {e}")
+            return False
 
 # Contract model
-class Contract(Base):
-    __tablename__ = 'contracts'
-    
-    id = Column(Integer, primary_key=True)
-    client_id = Column(Integer, ForeignKey('clients.id'), nullable=False)
-    commercial_contact = Column(Integer, ForeignKey('users.id'))  # The user handling the contract
-    total_amount = Column(Float, nullable=False)
-    amount_due = Column(Float, nullable=False)
-    creation_date = Column(Date, nullable=False)
-    signed = Column(Boolean, default=False)
+class Contract:
+    def __init__(self, id, client_id, sales_contact_id, total_amount, amount_remaining, date_created, status, created_at=None, updated_at=None):
+        self.id = id
+        self.client_id = client_id
+        self.sales_contact_id = sales_contact_id
+        self.total_amount = total_amount
+        self.amount_remaining = amount_remaining
+        self.date_created = date_created
+        self.status = status
+        self.created_at = created_at
+        self.updated_at = updated_at
 
-    client = relationship("Client")
-    user = relationship("User")
+    @staticmethod
+    def create(client_id, sales_contact_id, total_amount, amount_remaining, status):
+        try:
+            with Database.connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """INSERT INTO contracts (client_id, sales_contact_id, total_amount, amount_remaining, status)
+                    VALUES (?, ?, ?, ?, ?)""",
+                    (client_id, sales_contact_id, total_amount, amount_remaining, status)
+                )
+                conn.commit()
+                contract_id = cursor.lastrowid
+                logging.info(f"Contract ID {contract_id} created for client ID {client_id}.")
+                return Contract.get_by_id(contract_id)
+        except sqlite3.Error as e:
+            logging.error(f"Database error in Contract.create: {e}")
+            return None
+
+    @staticmethod
+    def get_by_id(contract_id):
+        try:
+            conn = Database.connect()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM contracts WHERE id = ?",
+                (contract_id,)
+            )
+            contract_row = cursor.fetchone()
+            if contract_row:
+                return Contract(**contract_row)
+            return None
+        except sqlite3.Error as e:
+            logging.error(f"Database error in Contract.get_by_id: {e}")
+            return None
+        finally:
+            conn.close()
+
+    def update(self):
+        try:
+            with Database.connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """UPDATE contracts SET client_id = ?, sales_contact_id = ?, total_amount = ?, amount_remaining = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?""",
+                    (self.client_id, self.sales_contact_id, self.total_amount, self.amount_remaining, self.status, self.id)
+                )
+                conn.commit()
+                logging.info(f"Contract ID {self.id} updated.")
+                return True
+        except sqlite3.Error as e:
+            logging.error(f"Database error in Contract.update: {e}")
+            return False
+
+    def delete(self):
+        try:
+            with Database.connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "DELETE FROM contracts WHERE id = ?",
+                    (self.id,)
+                )
+                conn.commit()
+                logging.info(f"Contract ID {self.id} deleted.")
+                return True
+        except sqlite3.Error as e:
+            logging.error(f"Database error in Contract.delete: {e}")
+            return False
 
 # Event model
-class Event(Base):
-    __tablename__ = 'events'
-    
-    id = Column(Integer, primary_key=True)
-    contract_id = Column(Integer, ForeignKey('contracts.id'), nullable=False)
-    event_name = Column(String(100), nullable=False)
-    start_date = Column(Date, nullable=False)
-    end_date = Column(Date, nullable=False)
-    location = Column(String(255), nullable=False)
-    support_contact = Column(Integer, ForeignKey('users.id'))  # User in charge of the event
-    attendees = Column(Integer)
-    notes = Column(String(500))
+class Event:
+    def __init__(self, id, contract_id, support_contact_id, event_date_start, event_date_end, location, attendees, notes, created_at=None, updated_at=None):
+        self.id = id
+        self.contract_id = contract_id
+        self.support_contact_id = support_contact_id
+        self.event_date_start = event_date_start
+        self.event_date_end = event_date_end
+        self.location = location
+        self.attendees = attendees
+        self.notes = notes
+        self.created_at = created_at
+        self.updated_at = updated_at
 
-    contract = relationship("Contract")
-    user = relationship("User")
+    @staticmethod
+    def create(contract_id, support_contact_id, event_date_start, event_date_end, location, attendees, notes):
+        try:
+            with Database.connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """INSERT INTO events (contract_id, support_contact_id, event_date_start, event_date_end, location, attendees, notes)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (contract_id, support_contact_id, event_date_start, event_date_end, location, attendees, notes)
+                )
+                conn.commit()
+                event_id = cursor.lastrowid
+                logging.info(f"Event ID {event_id} created for contract ID {contract_id}.")
+                return Event.get_by_id(event_id)
+        except sqlite3.Error as e:
+            logging.error(f"Database error in Event.create: {e}")
+            return None
 
-# To create the tables
-Base.metadata.create_all(engine)
+    @staticmethod
+    def get_by_id(event_id):
+        try:
+            conn = Database.connect()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM events WHERE id = ?",
+                (event_id,)
+            )
+            event_row = cursor.fetchone()
+            if event_row:
+                return Event(**event_row)
+            return None
+        except sqlite3.Error as e:
+            logging.error(f"Database error in Event.get_by_id: {e}")
+            return None
+        finally:
+            conn.close()
+
+    def update(self):
+        try:
+            with Database.connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """UPDATE events SET contract_id = ?, support_contact_id = ?, event_date_start = ?, event_date_end = ?, location = ?, attendees = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?""",
+                    (self.contract_id, self.support_contact_id, self.event_date_start, self.event_date_end, self.location, self.attendees, self.notes, self.id)
+                )
+                conn.commit()
+                logging.info(f"Event ID {self.id} updated.")
+                return True
+        except sqlite3.Error as e:
+            logging.error(f"Database error in Event.update: {e}")
+            return False
+
+    def delete(self):
+        try:
+            with Database.connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "DELETE FROM events WHERE id = ?",
+                    (self.id,)
+                )
+                conn.commit()
+                logging.info(f"Event ID {self.id} deleted.")
+                return True
+        except sqlite3.Error as e:
+            logging.error(f"Database error in Event.delete: {e}")
+            return False
+
+# Permission model
+class Permission:
+    def __init__(self, id, role_id, entity, action):
+        self.id = id
+        self.role_id = role_id
+        self.entity = entity
+        self.action = action
+
+    @staticmethod
+    def get_permissions_by_role(role_id):
+        try:
+            conn = Database.connect()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM permissions WHERE role_id = ?",
+                (role_id,)
+            )
+            permissions = []
+            for row in cursor.fetchall():
+                permissions.append(Permission(**row))
+            return permissions
+        except sqlite3.Error as e:
+            logging.error(f"Database error in Permission.get_permissions_by_role: {e}")
+            return []
+        finally:
+            conn.close()
