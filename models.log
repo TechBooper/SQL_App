@@ -1,0 +1,25 @@
+2024-10-19 10:55:55,472 - ERROR - Error while creating user root: name 'bcrypt' is not defined
+2024-10-19 10:56:22,695 - WARNING - Failed authentication attempt for username: admin.
+2024-10-19 10:56:28,090 - WARNING - Failed authentication attempt for username: root.
+2024-10-21 14:30:29,481 - WARNING - Failed authentication attempt for username: root.
+2024-10-21 14:41:59,564 - WARNING - Failed authentication attempt for username: root.
+2024-10-21 14:42:02,063 - WARNING - Failed authentication attempt for username: root.
+2024-10-21 14:42:07,726 - WARNING - Failed authentication attempt for username: root.
+2024-10-21 14:42:13,674 - WARNING - Failed authentication attempt for username: root.
+2024-10-21 15:54:03,869 - INFO - User root created with ID 1.
+2024-10-21 15:54:03,872 - INFO - User root created successfully with role ID 1.
+2024-10-21 16:01:34,949 - INFO - User root created with ID 1.
+2024-10-21 16:01:34,951 - INFO - User root created successfully with role ID 1.
+2024-10-21 16:01:58,199 - INFO - User root authenticated successfully.
+2024-10-21 16:01:58,200 - INFO - Role Management retrieved for user ID 1.
+2024-10-21 20:57:36,735 - INFO - User root authenticated successfully.
+2024-10-21 20:57:36,737 - INFO - Role Management retrieved for user ID 1.
+2024-10-22 17:46:52,767 - WARNING - Failed authentication attempt for username: root.
+2024-10-22 17:47:01,168 - INFO - User root authenticated successfully.
+2024-10-22 17:47:01,169 - INFO - Role Management retrieved for user ID 1.
+2024-10-22 18:10:47,587 - INFO - User root authenticated successfully.
+2024-10-22 18:10:47,588 - INFO - Role Management retrieved for user ID 1.
+2024-10-22 18:11:33,495 - INFO - Client john@hotmail.com created with ID 1.
+2024-10-22 18:11:33,497 - INFO - Client john doe created by user ID 1.
+2024-10-22 18:13:31,531 - INFO - User root authenticated successfully.
+2024-10-22 18:13:31,532 - INFO - Role Management retrieved for user ID 1.

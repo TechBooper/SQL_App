@@ -21,14 +21,17 @@ class Database:
 
 # User model
 class User:
-    def __init__(self, id, username, password_hash, role_id, email, created_at=None, updated_at=None):
+    def __init__(self, id, username, password_hash, role_id, email, bio=None, created_at=None, updated_at=None):
         self.id = id
         self.username = username
         self.password_hash = password_hash
         self.role_id = role_id
         self.email = email
+        self.bio = bio 
         self.created_at = created_at
         self.updated_at = updated_at
+    
+    
 
     @staticmethod
     def create(username, password_hash, role_id, email):
@@ -85,13 +88,14 @@ class User:
         finally:
             conn.close()
 
+    # Update method should include the bio field in the query
     def update(self):
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "UPDATE users SET username = ?, password_hash = ?, role_id = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                    (self.username, self.password_hash, self.role_id, self.email, self.id)
+                    "UPDATE users SET username = ?, password_hash = ?, role_id = ?, email = ?, bio = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    (self.username, self.password_hash, self.role_id, self.email, self.bio, self.id)
                 )
                 conn.commit()
                 logging.info(f"User {self.username} with ID {self.id} updated.")
