@@ -5,6 +5,7 @@ Authentication module for handling user login and role management.
 import bcrypt
 import logging
 from models import User, Role
+import sqlite3
 
 # Configure logging settings
 logging.basicConfig(
@@ -99,3 +100,14 @@ def hash_password(password):
         bytes: The hashed password.
     """
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+def has_permission(role_id, entity, action):
+    conn = sqlite3.connect('app.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT 1 FROM permissions
+        WHERE role_id = ? AND entity = ? AND action = ?
+    ''', (role_id, entity, action))
+    result = cursor.fetchone()
+    conn.close()
+    return result is not None

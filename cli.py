@@ -2,7 +2,7 @@ import argparse
 import sys
 import getpass
 import logging
-from auth import authenticate, get_user_role, hash_password, create_user
+from auth import authenticate, get_user_role, hash_password, has_permission
 from controllers import (
     create_user,
     update_user,
@@ -77,52 +77,58 @@ def interactive_session(session):
                 print("Available commands:")
                 print("  view_profile")
                 print("  update_profile <email>")
-                print("  create_user <username> <password> <role_id> <email>  # Gestion only")
-                print("  update_user <user_id> <username> <email> <role_id>  # Gestion only")
-                print("  delete_user <user_id>                                # Gestion only")
+                print("  create_user <username> <password> <role_id> <email>  # Management only")
+                print("  update_user <user_id> <username> <email> <role_id>  # Management only")
+                print("  delete_user <user_id>                                # Management only")
                 print("  create_client <first_name> <last_name> <email> <phone> <company_name>  # Commercial only")
                 print("  update_client <client_id> <first_name> <last_name> <email> <phone> <company_name>")
-                print("  delete_client <client_id>                            # Gestion only")
+                print("  delete_client <client_id>                            # Management only")
                 print("  create_contract <client_id> <total_amount> <amount_remaining> <status>")
                 print("  update_contract <contract_id> <total_amount> <amount_remaining> <status>")
-                print("  delete_contract <contract_id>                        # Gestion only")
+                print("  delete_contract <contract_id>                        # Management only")
                 print("  create_event <contract_id> <event_date_start> <event_date_end> <location> <attendees> <notes>  # Commercial only")
                 print("  update_event <event_id> <event_date_start> <event_date_end> <location> <attendees> <notes>")
-                print("  assign_support <event_id> <support_user_id>          # Gestion only")
+                print("  assign_support <event_id> <support_user_id>          # Management only")
                 print("  view_clients")
                 print("  view_contracts")
                 print("  view_events")
                 print("  filter_contracts <status>                            # Commercial only")
-                print("  filter_events_unassigned                             # Gestion only")
+                print("  filter_events_unassigned                             # Management only")
                 print("  filter_events_assigned_to_me                         # Support only")
                 print("  logout")
             elif command == 'view_profile':
-                user_id = session['user_id']
-                user = User.get_by_id(user_id)
-                if user:
-                    print(f"User Profile:")
-                    print(f"  Username: {user.username}")
-                    print(f"  Email: {user.email}")
-                    print(f"  Role: {session['role']}")
-                else:
-                    print("Error fetching user profile.")
-            elif command == 'update_profile':
-                if len(command_parts) == 2:
-                    new_email = command_parts[1]
+                if has_permission(session['role_id'], 'user', 'read'):
                     user_id = session['user_id']
                     user = User.get_by_id(user_id)
                     if user:
-                        user.email = new_email
-                        if user.update():
-                            print("Profile updated successfully.")
-                        else:
-                            print("Failed to update profile.")
+                        print(f"User Profile:")
+                        print(f"  Username: {user.username}")
+                        print(f"  Email: {user.email}")
+                        print(f"  Role: {session['role']}")
                     else:
-                        print("User not found.")
+                        print("Error fetching user profile.")
                 else:
-                    print("Usage: update_profile <new_email>")
+                    print("Permission denied.")
+            elif command == 'update_profile':
+                if has_permission(session['role_id'], 'user', 'update'):
+                    if len(command_parts) == 2:
+                        new_email = command_parts[1]
+                        user_id = session['user_id']
+                        user = User.get_by_id(user_id)
+                        if user:
+                            user.email = new_email
+                            if user.update():
+                                print("Profile updated successfully.")
+                            else:
+                                print("Failed to update profile.")
+                        else:
+                            print("User not found.")
+                    else:
+                        print("Usage: update_profile <new_email>")
+                else:
+                    print("Permission denied.")
             elif command == 'create_user':
-                if session['role'] == 'Gestion':
+                if has_permission(session['role_id'], 'user', 'create'):
                     if len(command_parts) == 5:
                         username = command_parts[1]
                         password = command_parts[2]
@@ -144,7 +150,7 @@ def interactive_session(session):
                 else:
                     print("Permission denied.")
             elif command == 'update_user':
-                if session['role'] == 'Gestion':
+                if has_permission(session['role_id'], 'user', 'update'):
                     if len(command_parts) == 5:
                         user_id_to_update = int(command_parts[1])
                         username = command_parts[2]
@@ -163,7 +169,7 @@ def interactive_session(session):
                 else:
                     print("Permission denied.")
             elif command == 'delete_user':
-                if session['role'] == 'Gestion':
+                if has_permission(session['role_id'], 'user', 'delete'):
                     if len(command_parts) == 2:
                         user_id_to_delete = int(command_parts[1])
                         result = delete_user(
@@ -176,7 +182,7 @@ def interactive_session(session):
                 else:
                     print("Permission denied.")
             elif command == 'create_client':
-                if session['role'] == 'Commercial':
+                if has_permission(session['role_id'], 'client', 'create'):
                     if len(command_parts) >= 6:
                         first_name = command_parts[1]
                         last_name = command_parts[2]
@@ -197,7 +203,7 @@ def interactive_session(session):
                 else:
                     print("Permission denied.")
             elif command == 'update_client':
-                if session['role'] in ['Commercial', 'Gestion']:
+                if has_permission(session['role_id'], 'client', 'update'):
                     if len(command_parts) >= 7:
                         client_id = int(command_parts[1])
                         first_name = command_parts[2]
@@ -220,7 +226,7 @@ def interactive_session(session):
                 else:
                     print("Permission denied.")
             elif command == 'delete_client':
-                if session['role'] == 'Gestion':
+                if has_permission(session['role_id'], 'client', 'delete'):
                     if len(command_parts) == 2:
                         client_id = int(command_parts[1])
                         result = delete_client(
@@ -233,7 +239,7 @@ def interactive_session(session):
                 else:
                     print("Permission denied.")
             elif command == 'create_contract':
-                if session['role'] in ['Commercial', 'Gestion']:
+                if has_permission(session['role_id'], 'contract', 'create'):
                     if len(command_parts) == 5:
                         client_id = int(command_parts[1])
                         total_amount = float(command_parts[2])
@@ -252,7 +258,7 @@ def interactive_session(session):
                 else:
                     print("Permission denied.")
             elif command == 'update_contract':
-                if session['role'] in ['Commercial', 'Gestion']:
+                if has_permission(session['role_id'], 'contract', 'update'):
                     if len(command_parts) == 5:
                         contract_id = int(command_parts[1])
                         total_amount = float(command_parts[2])
@@ -271,7 +277,7 @@ def interactive_session(session):
                 else:
                     print("Permission denied.")
             elif command == 'delete_contract':
-                if session['role'] == 'Gestion':
+                if has_permission(session['role_id'], 'contract', 'delete'):
                     if len(command_parts) == 2:
                         contract_id = int(command_parts[1])
                         result = delete_contract(
@@ -284,7 +290,7 @@ def interactive_session(session):
                 else:
                     print("Permission denied.")
             elif command == 'create_event':
-                if session['role'] == 'Commercial':
+                if has_permission(session['role_id'], 'event', 'create'):
                     if len(command_parts) >= 7:
                         contract_id = int(command_parts[1])
                         event_date_start = command_parts[2]
@@ -307,7 +313,7 @@ def interactive_session(session):
                 else:
                     print("Permission denied.")
             elif command == 'update_event':
-                if session['role'] in ['Support', 'Gestion']:
+                if has_permission(session['role_id'], 'event', 'update'):
                     if len(command_parts) >= 7:
                         event_id = int(command_parts[1])
                         event_date_start = command_parts[2]
@@ -330,7 +336,7 @@ def interactive_session(session):
                 else:
                     print("Permission denied.")
             elif command == 'assign_support':
-                if session['role'] == 'Gestion':
+                if has_permission(session['role_id'], 'event', 'update'):
                     if len(command_parts) == 3:
                         event_id = int(command_parts[1])
                         support_user_id = int(command_parts[2])
@@ -345,19 +351,28 @@ def interactive_session(session):
                 else:
                     print("Permission denied.")
             elif command == 'view_clients':
-                clients = get_all_clients()
-                for client in clients:
-                    print(client)
+                if has_permission(session['role_id'], 'client', 'read'):
+                    clients = get_all_clients()
+                    for client in clients:
+                        print(client)
+                else:
+                    print("Permission denied.")
             elif command == 'view_contracts':
-                contracts = get_all_contracts()
-                for contract in contracts:
-                    print(contract)
+                if has_permission(session['role_id'], 'contract', 'read'):
+                    contracts = get_all_contracts()
+                    for contract in contracts:
+                        print(contract)
+                else:
+                    print("Permission denied.")
             elif command == 'view_events':
-                events = get_all_events(session['user_id'])
-                for event in events:
-                    print(event)
+                if has_permission(session['role_id'], 'event', 'read'):
+                    events = get_all_events(session['user_id'])
+                    for event in events:
+                        print(event)
+                else:
+                    print("Permission denied.")
             elif command == 'filter_contracts':
-                if session['role'] == 'Commercial':
+                if has_permission(session['role_id'], 'contract', 'read'):
                     if len(command_parts) == 2:
                         status = command_parts[1]
                         contracts = filter_contracts_by_status(session['user_id'], status)
@@ -368,14 +383,14 @@ def interactive_session(session):
                 else:
                     print("Permission denied.")
             elif command == 'filter_events_unassigned':
-                if session['role'] == 'Gestion':
+                if has_permission(session['role_id'], 'event', 'read'):
                     events = filter_events_unassigned()
                     for event in events:
                         print(event)
                 else:
                     print("Permission denied.")
             elif command == 'filter_events_assigned_to_me':
-                if session['role'] == 'Support':
+                if has_permission(session['role_id'], 'event', 'read'):
                     events = filter_events_by_support_user(session['user_id'])
                     for event in events:
                         print(event)
