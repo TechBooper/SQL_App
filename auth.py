@@ -63,21 +63,20 @@ def get_user_role(user_id):
         return None
 
 
-def create_user(username, password, role_id, email):
+def create_user(username, password_hash, role_id, email):
     """
     Creates a new user with the given details.
-    
+
     Args:
         username (str): The username for the new user.
-        password (str): The password for the new user.
+        password_hash (bytes): The hashed password for the new user.
         role_id (int): The role ID for the new user.
         email (str): The email address for the new user.
-    
+
     Returns:
         User: The created User object if successful, None otherwise.
     """
     try:
-        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         user = User.create(username=username, password_hash=password_hash, role_id=role_id, email=email)
         if user:
             logging.info("User %s created successfully with role ID %d.", username, role_id)
@@ -87,3 +86,16 @@ def create_user(username, password, role_id, email):
     except Exception as error:
         logging.error("Error while creating user %s: %s", username, str(error))
         return None
+
+
+def hash_password(password):
+    """
+    Hashes a password using bcrypt.
+    
+    Args:
+        password (str): The plain-text password to hash.
+    
+    Returns:
+        bytes: The hashed password.
+    """
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())

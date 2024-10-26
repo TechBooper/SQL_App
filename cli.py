@@ -2,7 +2,7 @@ import argparse
 import sys
 import getpass
 import logging
-from auth import authenticate, get_user_role, hash_password
+from auth import authenticate, get_user_role, hash_password, create_user
 from controllers import (
     create_user,
     update_user,
@@ -130,13 +130,15 @@ def interactive_session(session):
                         email = command_parts[4]
                         password_hash = hash_password(password)
                         result = create_user(
-                            session['user_id'],
                             username,
                             password_hash,
                             role_id,
                             email
                         )
-                        print(result)
+                        if result:
+                            print(f"User {username} created successfully.")
+                        else:
+                            print("Failed to create user.")
                     else:
                         print("Usage: create_user <username> <password> <role_id> <email>")
                 else:

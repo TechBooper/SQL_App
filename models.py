@@ -3,6 +3,7 @@
 import sqlite3
 import logging
 from datetime import datetime
+import bcrypt
 
 logging.basicConfig(
     filename='models.log',
@@ -34,8 +35,10 @@ class User:
     
 
     @staticmethod
-    def create(username, password_hash, role_id, email):
+    def create(username, password, role_id, email):
         try:
+            # Hash the password using bcrypt
+            password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
             with Database.connect() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
@@ -89,13 +92,20 @@ class User:
             conn.close()
 
     # Update method should include the bio field in the query
-    def update(self):
+    def update(self, password=None):
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
+                if password:
+                    # Hash the new password
+                    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+                else:
+                    # Keep the existing password hash
+                    password_hash = self.password_hash
+
                 cursor.execute(
                     "UPDATE users SET username = ?, password_hash = ?, role_id = ?, email = ?, bio = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                    (self.username, self.password_hash, self.role_id, self.email, self.bio, self.id)
+                    (self.username, password_hash, self.role_id, self.email, self.bio, self.id)
                 )
                 conn.commit()
                 logging.info(f"User {self.username} with ID {self.id} updated.")
@@ -103,7 +113,6 @@ class User:
         except sqlite3.Error as e:
             logging.error(f"Database error in User.update: {e}")
             return False
-
     def delete(self):
         try:
             with Database.connect() as conn:
@@ -117,6 +126,13 @@ class User:
                 return True
         except sqlite3.Error as e:
             logging.error(f"Database error in User.delete: {e}")
+            return False
+        
+    def verify_password(self, password):
+        try:
+            return bcrypt.checkpw(password.encode('utf-8'), self.password_hash)
+        except Exception as e:
+            logging.error(f"Error verifying password for user {self.username}: {e}")
             return False
 
 # Role model
