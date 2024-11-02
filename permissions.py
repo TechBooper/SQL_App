@@ -2,6 +2,7 @@
 
 from models import User, Permission
 
+
 def has_permission(user_id, entity, action, resource_owner_id=None):
     user = User.get_by_id(user_id)
     if not user:
@@ -19,8 +20,8 @@ def has_permission(user_id, entity, action, resource_owner_id=None):
         return False
 
     # Ownership checks for certain actions
-    if action in ['update', 'delete'] and entity in ['client', 'contract', 'event']:
-        if user.role.name == 'Management':
+    if action in ["update", "delete"] and entity in ["client", "contract", "event"]:
+        if user.role.name == "Management":
             # Management can update/delete any resource
             return True
         else:
@@ -32,7 +33,7 @@ def has_permission(user_id, entity, action, resource_owner_id=None):
                 return False
 
     # For create actions, additional ownership checks may apply
-    if action == 'create' and entity == 'event' and user.role.name == 'Sales':
+    if action == "create" and entity == "event" and user.role.name == "Sales":
         # Sales can only create events for their clients
         return resource_owner_id == user_id
 
