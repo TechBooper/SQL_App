@@ -22,16 +22,17 @@ class Database:
 
 # User model
 class User:
-    def __init__(self, id, username, password_hash, role_id, email, bio=None, created_at=None, updated_at=None):
-        self.id = id
-        self.username = username
-        self.password_hash = password_hash
-        self.role_id = role_id
-        self.email = email
-        self.bio = bio 
-        self.created_at = created_at
-        self.updated_at = updated_at
-    
+    def __init__(self, **kwargs):
+        self.id = kwargs.get('id')
+        self.username = kwargs.get('username')
+        self.password_hash = kwargs.get('password_hash')
+        self.role_id = kwargs.get('role_id')
+        self.email = kwargs.get('email')
+        self.bio = kwargs.get('bio', None)
+        self.created_at = kwargs.get('created_at', None)
+        self.updated_at = kwargs.get('updated_at', None)
+        logging.debug(f"Created User instance: {self.__dict__}")
+
     
 
     @staticmethod
@@ -64,7 +65,9 @@ class User:
             )
             user_row = cursor.fetchone()
             if user_row:
-                return User(**user_row)
+                user_data = dict(user_row)  # Convert Row to dict
+                logging.debug(f"user_data in get_by_username: {user_data}")
+                return User(**user_data)
             return None
         except sqlite3.Error as e:
             logging.error(f"Database error in User.get_by_username: {e}")
@@ -83,13 +86,16 @@ class User:
             )
             user_row = cursor.fetchone()
             if user_row:
-                return User(**user_row)
+                user_data = dict(user_row)  # Convert Row to dict
+                logging.debug(f"user_data in get_by_id: {user_data}")
+                return User(**user_data)
             return None
         except sqlite3.Error as e:
             logging.error(f"Database error in User.get_by_id: {e}")
             return None
         finally:
             conn.close()
+
 
     # Update method should include the bio field in the query
     def update(self, password=None):
@@ -137,9 +143,9 @@ class User:
 
 # Role model
 class Role:
-    def __init__(self, id, name):
-        self.id = id
-        self.name = name
+    def __init__(self, **kwargs):
+        self.id = kwargs.get('id')
+        self.name = kwargs.get('name')
 
     @staticmethod
     def get_by_id(role_id):
@@ -152,7 +158,9 @@ class Role:
             )
             role_row = cursor.fetchone()
             if role_row:
-                return Role(**role_row)
+                role_data = dict(role_row)
+                logging.debug(f"role_data in get_by_id: {role_data}")
+                return Role(**role_data)
             return None
         except sqlite3.Error as e:
             logging.error(f"Database error in Role.get_by_id: {e}")

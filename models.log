@@ -32,3 +32,23 @@
 2024-10-26 10:08:59,062 - ERROR - Database error in User.update: no such column: bio
 2024-10-26 10:10:05,093 - INFO - User root authenticated successfully.
 2024-10-26 10:10:05,094 - INFO - Role Management retrieved for user ID 1.
+2024-10-28 14:25:09,435 - INFO - User root authenticated successfully.
+2024-10-28 14:25:09,437 - INFO - Role Management retrieved for user ID 1.
+2024-10-28 14:26:10,540 - ERROR - Error while creating user root: User.create() got an unexpected keyword argument 'password_hash'
+2024-10-28 14:26:18,537 - WARNING - Failed authentication attempt for username: root.
+2024-10-28 14:26:24,693 - WARNING - Failed authentication attempt for username: root.
+2024-10-28 14:26:27,755 - WARNING - Failed authentication attempt for username: root.
+2024-10-28 20:57:32,707 - WARNING - Failed authentication attempt for username: root.
+2024-10-28 20:57:44,261 - WARNING - Failed authentication attempt for username: root.
+2024-10-28 20:58:26,831 - INFO - User root created with ID 1.
+2024-10-28 20:58:26,834 - INFO - User root created successfully with role ID 1.
+2024-10-28 20:58:33,302 - WARNING - Failed authentication attempt for username: root.
+2024-10-28 20:58:36,517 - INFO - User root authenticated successfully.
+2024-10-28 20:58:36,518 - INFO - Role Management retrieved for user ID 1.
+2024-10-28 21:01:33,929 - WARNING - User with ID john not found.
+2024-10-28 21:01:49,632 - WARNING - Failed authentication attempt for username: john.
+2024-10-28 21:02:01,796 - WARNING - Failed authentication attempt for username: john.
+2024-10-28 21:12:35,808 - WARNING - Failed authentication attempt for username: john.
+2024-10-28 21:12:41,712 - INFO - User root authenticated successfully.
+2024-10-28 21:12:41,713 - INFO - Role Management retrieved for user ID 1.
+2024-10-28 21:15:17,416 - WARNING - User with ID harry not found.

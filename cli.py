@@ -129,15 +129,14 @@ def interactive_session(session):
                     print("Permission denied.")
             elif command == 'create_user':
                 if has_permission(session['role_id'], 'user', 'create'):
-                    if len(command_parts) == 5:
+                    if len(command_parts) == 4:
                         username = command_parts[1]
-                        password = command_parts[2]
-                        role_id = int(command_parts[3])
-                        email = command_parts[4]
-                        password_hash = hash_password(password)
+                        role_id = int(command_parts[2])
+                        email = command_parts[3]
+                        password = getpass.getpass("Password: ")
                         result = create_user(
                             username,
-                            password_hash,
+                            password,  # Pass plain-text password
                             role_id,
                             email
                         )
@@ -146,7 +145,7 @@ def interactive_session(session):
                         else:
                             print("Failed to create user.")
                     else:
-                        print("Usage: create_user <username> <password> <role_id> <email>")
+                        print("Usage: create_user <username> <role_id> <email>")
                 else:
                     print("Permission denied.")
             elif command == 'update_user':
