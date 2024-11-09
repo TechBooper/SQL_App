@@ -1,0 +1,18 @@
+2024-11-08 15:57:48,278 - INFO - Database initialized with all tables and triggers.
+2024-11-08 15:57:48,286 - INFO - Role 'Management' created successfully.
+2024-11-08 15:57:48,295 - INFO - Role 'Commercial' created successfully.
+2024-11-08 15:57:48,303 - INFO - Role 'Support' created successfully.
+2024-11-08 15:57:48,313 - INFO - Default permissions inserted.
+2024-11-08 15:58:05,821 - WARNING - Password for user 'root' is not strong enough.
+2024-11-08 16:01:55,672 - INFO - Database initialized with all tables and triggers.
+2024-11-08 16:01:55,684 - INFO - Role 'Management' created successfully.
+2024-11-08 16:01:55,696 - INFO - Role 'Commercial' created successfully.
+2024-11-08 16:01:55,709 - INFO - Role 'Support' created successfully.
+2024-11-08 16:01:55,722 - INFO - Default permissions inserted.
+2024-11-08 16:02:20,353 - INFO - User 'root' created successfully with role ID '1'.
+2024-11-08 16:51:52,088 - INFO - Database initialized with all tables and triggers.
+2024-11-08 16:51:52,101 - INFO - Role 'Management' created successfully.
+2024-11-08 16:51:52,114 - INFO - Role 'Commercial' created successfully.
+2024-11-08 16:51:52,127 - INFO - Role 'Support' created successfully.
+2024-11-08 16:51:52,141 - INFO - Default permissions inserted.
+2024-11-08 16:52:08,225 - INFO - User 'root' created successfully with role ID '1'.

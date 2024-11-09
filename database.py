@@ -1,8 +1,11 @@
+# database.py
+
 import bcrypt
 import sqlite3
 import logging
-import base64  # Import base64 for encoding and decoding
+import base64
 import os
+import getpass
 
 # Configure logging to output to a file
 logging.basicConfig(
@@ -10,52 +13,6 @@ logging.basicConfig(
     level=logging.INFO,  # Log level
     format="%(asctime)s - %(levelname)s - %(message)s",  # Log format
 )
-
-
-# Ensure the database file exists or create tables if necessary
-def initialize_database():
-    if not os.path.exists("app.db"):
-        with sqlite3.connect("app.db") as conn:
-            cursor = conn.cursor()
-            # Create roles table
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS roles (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT UNIQUE NOT NULL
-                )
-            """
-            )
-            # Create users table with an email field
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL,
-                    email TEXT UNIQUE NOT NULL,
-                    password_hash TEXT NOT NULL,
-                    role_id INTEGER NOT NULL,
-                    FOREIGN KEY (role_id) REFERENCES roles(id)
-                )
-            """
-            )
-            # Create permissions table (if not already created)
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS permissions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    role_id INTEGER NOT NULL,
-                    entity TEXT NOT NULL,
-                    action TEXT NOT NULL,
-                    FOREIGN KEY (role_id) REFERENCES roles(id)
-                )
-            """
-            )
-            conn.commit()
-            logging.info(
-                "Database initialized with tables 'roles', 'users', and 'permissions'."
-            )
-
 
 # Password strength validation
 def is_password_strong(password):
@@ -68,7 +25,6 @@ def is_password_strong(password):
     if not any(char.islower() for char in password):
         return False
     return True
-
 
 # Function to create a new user
 def create_user(username, password, role_id, email):
@@ -138,80 +94,7 @@ def create_role(name):
         logging.error(f"Database connection error while creating role '{name}': {e}")
         print(f"Database connection error: {e}")
 
-
-# Function to retrieve the role for a specific user (based on user_id)
-def get_user_role(user_id):
-    try:
-        with sqlite3.connect("app.db") as conn:
-            conn.row_factory = sqlite3.Row  # Enable access to columns by name
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT roles.name
-                FROM roles
-                JOIN users ON users.role_id = roles.id
-                WHERE users.id = ?
-                """,
-                (user_id,),
-            )
-            role = cursor.fetchone()
-            if role:
-                logging.info(f"Role '{role['name']}' retrieved for user ID {user_id}.")
-                return role["name"]
-            else:
-                logging.warning(f"No role found for user ID {user_id}.")
-                return None
-    except sqlite3.Error as e:
-        logging.error(
-            f"Database connection error while retrieving role for user ID {user_id}: {e}"
-        )
-        print(f"Database connection error: {e}")
-        return None
-
-
-# Function to authenticate a user (username and password)
-def authenticate(username, password):
-    try:
-        with sqlite3.connect("app.db") as conn:
-            conn.row_factory = sqlite3.Row  # Enable access to columns by name
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT id, password_hash, role_id FROM users WHERE username = ?",
-                (username,),
-            )
-            user = cursor.fetchone()
-            if user:
-                # Decode the stored hash from base64 string to bytes
-                stored_password_hash = base64.b64decode(
-                    user["password_hash"].encode("utf-8")
-                )
-                # Encode the entered password to bytes
-                password_bytes = password.encode("utf-8")
-                # Check the password
-                if bcrypt.checkpw(password_bytes, stored_password_hash):
-                    logging.info(f"User '{username}' authenticated successfully.")
-                    return {"user_id": user["id"], "role_id": user["role_id"]}
-                else:
-                    logging.warning(
-                        f"Failed authentication attempt for username: {username}. Incorrect password."
-                    )
-                    return None
-            else:
-                logging.warning(
-                    f"Failed authentication attempt for username: {username}. User not found."
-                )
-                return None
-    except sqlite3.Error as e:
-        logging.error(f"Database error during authentication for '{username}': {e}")
-        print(f"Database error: {e}")
-        return None
-    except Exception as e:
-        logging.error(f"Unexpected error during authentication for '{username}': {e}")
-        print(f"An unexpected error occurred: {e}")
-        return None
-
-
-# Function to insert default permissions (if needed)
+# Function to insert default permissions
 def insert_default_permissions():
     try:
         with sqlite3.connect("app.db") as conn:
@@ -219,60 +102,75 @@ def insert_default_permissions():
 
             # Permissions for Management
             management_permissions = [
-                ("Management", "client", "create"),
-                ("Management", "client", "update"),
-                ("Management", "contract", "create"),
-                ("Management", "contract", "update"),
-                ("Management", "event", "create"),
-                ("Management", "event", "update"),
+                ("client", "create"),
+                ("client", "update"),
+                ("client", "read"),
+                ("client", "delete"),
+                ("contract", "create"),
+                ("contract", "update"),
+                ("contract", "read"),
+                ("contract", "delete"),
+                ("event", "create"),
+                ("event", "update"),
+                ("event", "read"),
+                ("event", "delete"),
+                ("user", "create"),
+                ("user", "update"),
+                ("user", "delete"),
+                ("user", "read"),
             ]
 
-            # Permissions for Sales
-            sales_permissions = [
-                ("Sales", "client", "create"),
-                ("Sales", "client", "update"),
-                ("Sales", "contract", "create"),
-                ("Sales", "contract", "update"),
-                ("Sales", "event", "create"),
+            # Permissions for Commercial
+            commercial_permissions = [
+                ("client", "create"),
+                ("client", "update"),
+                ("client", "read"),
+                ("contract", "create"),
+                ("contract", "update"),
+                ("contract", "read"),
+                ("event", "create"),
+                ("event", "read"),
             ]
 
             # Permissions for Support
             support_permissions = [
-                ("Support", "event", "read"),
-                ("Support", "event", "update"),
+                ("event", "read"),
+                ("event", "update"),
+                ("client", "read"),
+                ("contract", "read"),
             ]
 
             # Insert Management Permissions
-            for role, entity, action in management_permissions:
+            for entity, action in management_permissions:
                 cursor.execute(
                     """
                     INSERT INTO permissions (role_id, entity, action)
                     SELECT roles.id, ?, ?
                     FROM roles
-                    WHERE roles.name = ?""",
-                    (entity, action, role),
+                    WHERE roles.name = 'Management'""",
+                    (entity, action),
                 )
 
-            # Insert Sales Permissions
-            for role, entity, action in sales_permissions:
+            # Insert Commercial Permissions
+            for entity, action in commercial_permissions:
                 cursor.execute(
                     """
                     INSERT INTO permissions (role_id, entity, action)
                     SELECT roles.id, ?, ?
                     FROM roles
-                    WHERE roles.name = ?""",
-                    (entity, action, role),
+                    WHERE roles.name = 'Commercial'""",
+                    (entity, action),
                 )
 
             # Insert Support Permissions
-            for role, entity, action in support_permissions:
+            for entity, action in support_permissions:
                 cursor.execute(
                     """
                     INSERT INTO permissions (role_id, entity, action)
                     SELECT roles.id, ?, ?
                     FROM roles
-                    WHERE roles.name = ?""",
-                    (entity, action, role),
+                    WHERE roles.name = 'Support'""",
+                    (entity, action),
                 )
 
             conn.commit()
@@ -282,20 +180,203 @@ def insert_default_permissions():
         logging.error(f"Database error during inserting default permissions: {e}")
         print(f"Database error during inserting default permissions: {e}")
 
+def initialize_database():
+    if not os.path.exists("app.db"):
+        with sqlite3.connect("app.db") as conn:
+            cursor = conn.cursor()
 
-# Initialize the database if it doesn't exist
-initialize_database()
+            # Create roles table
+            cursor.execute(
+                """
+                CREATE TABLE roles (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL UNIQUE
+                )
+                """
+            )
 
-# Note: The following code is optional and can be uncommented to set up roles, users, and permissions.
-# Be cautious when running test code to avoid unintended data modifications.
+            # Create users table
+            cursor.execute(
+                """
+                CREATE TABLE users (
+                    id INTEGER PRIMARY KEY,
+                    username TEXT NOT NULL UNIQUE,
+                    password_hash TEXT NOT NULL,
+                    role_id INTEGER NOT NULL,
+                    email TEXT NOT NULL UNIQUE,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+                )
+                """
+            )
 
-# Create default roles
-# create_role('Management')
-# create_role('Sales')
-# create_role('Support')
+            # Create profiles table
+            cursor.execute(
+                """
+                CREATE TABLE profiles (
+                    user_id INTEGER PRIMARY KEY,
+                    bio TEXT,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
+            )
 
-# Insert default permissions
-# insert_default_permissions()
+            # Create clients table with UNIQUE constraint
+            cursor.execute(
+                """
+                CREATE TABLE clients (
+                    id INTEGER PRIMARY KEY,
+                    first_name TEXT NOT NULL,
+                    last_name TEXT NOT NULL,
+                    email TEXT NOT NULL UNIQUE,
+                    phone TEXT,
+                    company_name TEXT,
+                    last_contact DATE,
+                    sales_contact_id INTEGER,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (sales_contact_id) REFERENCES users(id) ON DELETE SET NULL,
+                    UNIQUE (first_name, last_name, company_name)
+                )
+                """
+            )
 
-# Create an admin user (assuming role_id for 'Management' is 1)
-# create_user('admin', 'YourStrongP@ssw0rd', 1, 'admin@example.com')
+            # Create contracts table with FIXED UNIQUE constraint
+            cursor.execute(
+                """
+                CREATE TABLE contracts (
+                    id INTEGER PRIMARY KEY,
+                    client_id INTEGER NOT NULL,
+                    sales_contact_id INTEGER,
+                    total_amount REAL NOT NULL,
+                    amount_remaining REAL NOT NULL,
+                    status TEXT NOT NULL CHECK (status IN ('Signed', 'Not Signed')),
+                    date_created DATE DEFAULT CURRENT_DATE,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+                    FOREIGN KEY (sales_contact_id) REFERENCES users(id) ON DELETE SET NULL,
+                    UNIQUE (client_id, total_amount, status, date_created)
+                )
+                """
+            )
+
+            # Create events table
+            cursor.execute(
+                """
+                CREATE TABLE events (
+                    id INTEGER PRIMARY KEY,
+                    contract_id INTEGER NOT NULL,
+                    support_contact_id INTEGER,
+                    event_date_start DATETIME NOT NULL,
+                    event_date_end DATETIME NOT NULL,
+                    location TEXT,
+                    attendees INTEGER,
+                    notes TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE,
+                    FOREIGN KEY (support_contact_id) REFERENCES users(id) ON DELETE SET NULL,
+                    UNIQUE (contract_id, event_date_start, event_date_end, location)
+                )
+                """
+            )
+
+            # Create permissions table
+            cursor.execute(
+                """
+                CREATE TABLE permissions (
+                    id INTEGER PRIMARY KEY,
+                    role_id INTEGER NOT NULL,
+                    entity TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+                )
+                """
+            )
+
+            # Create triggers to auto-update updated_at fields
+
+            # For users table
+            cursor.execute(
+                """
+                CREATE TRIGGER update_users_updated_at
+                AFTER UPDATE ON users
+                FOR EACH ROW
+                BEGIN
+                    UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
+                END;
+                """
+            )
+
+            # For clients table
+            cursor.execute(
+                """
+                CREATE TRIGGER update_clients_updated_at
+                AFTER UPDATE ON clients
+                FOR EACH ROW
+                BEGIN
+                    UPDATE clients SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
+                END;
+                """
+            )
+
+            # For contracts table
+            cursor.execute(
+                """
+                CREATE TRIGGER update_contracts_updated_at
+                AFTER UPDATE ON contracts
+                FOR EACH ROW
+                BEGIN
+                    UPDATE contracts SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
+                END;
+                """
+            )
+
+            # For events table
+            cursor.execute(
+                """
+                CREATE TRIGGER update_events_updated_at
+                AFTER UPDATE ON events
+                FOR EACH ROW
+                BEGIN
+                    UPDATE events SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
+                END;
+                """
+            )
+
+            conn.commit()
+            logging.info("Database initialized with all tables and triggers.")
+            print("Database initialized successfully.")
+
+        # Create default roles
+        create_role('Management')
+        create_role('Commercial')
+        create_role('Support')
+
+        # Insert default permissions
+        insert_default_permissions()
+
+        # Create admin user interactively
+        admin_username = input("Enter admin username: ")
+        admin_email = input("Enter admin email: ")
+        admin_password = getpass.getpass("Enter admin password: ")
+
+        # Get role_id for 'Management'
+        with sqlite3.connect("app.db") as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM roles WHERE name = ?", ("Management",))
+            role = cursor.fetchone()
+            if role:
+                role_id = role[0]
+                create_user(admin_username, admin_password, role_id, admin_email)
+                print(f"Admin user '{admin_username}' created.")
+            else:
+                print("Error: 'Management' role not found.")
+
+    else:
+        print("Database already exists. Initialization skipped.")
+
+if __name__ == "__main__":
+    initialize_database()

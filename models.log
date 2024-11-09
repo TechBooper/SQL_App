@@ -110,3 +110,45 @@
 2024-11-02 02:40:43,919 - INFO - Client ID 2 deleted by user ID 1.
 2024-11-02 02:40:50,391 - INFO - Client John@gmai.com with ID 1 deleted.
 2024-11-02 02:40:50,392 - INFO - Client ID 1 deleted by user ID 1.
+2024-11-02 10:03:53,806 - WARNING - Failed authentication attempt for username: root.
+2024-11-02 10:03:59,411 - INFO - User root authenticated successfully.
+2024-11-02 10:03:59,412 - INFO - Role Management retrieved for user ID 1.
+2024-11-02 10:30:55,348 - INFO - User root authenticated successfully.
+2024-11-02 10:30:55,350 - INFO - Role Management retrieved for user ID 1.
+2024-11-08 15:58:50,314 - WARNING - Failed authentication attempt for username: root.
+2024-11-08 16:02:34,615 - INFO - User root authenticated successfully.
+2024-11-08 16:02:34,617 - INFO - Role Management retrieved for user ID 1.
+2024-11-08 16:03:24,614 - INFO - Client john@gmail.com created with ID 1.
+2024-11-08 16:03:24,615 - INFO - Client John Last created by user ID 1.
+2024-11-08 16:03:31,897 - WARNING - Attempted to create duplicate client: John Last at HALLIS.
+2024-11-08 16:06:00,297 - WARNING - Attempted to create duplicate client: John Last at HALLIS.
+2024-11-08 16:14:48,849 - ERROR - Integrity error in Contract.create: CHECK constraint failed: status IN ('Signed', 'Not Signed')
+2024-11-08 16:15:17,643 - ERROR - Integrity error in Contract.create: CHECK constraint failed: status IN ('Signed', 'Not Signed')
+2024-11-08 16:18:21,069 - INFO - User root authenticated successfully.
+2024-11-08 16:18:21,070 - INFO - Role Management retrieved for user ID 1.
+2024-11-08 16:18:29,559 - ERROR - Integrity error in Contract.create: CHECK constraint failed: status IN ('Signed', 'Not Signed')
+2024-11-08 16:18:35,766 - ERROR - Integrity error in Contract.create: CHECK constraint failed: status IN ('Signed', 'Not Signed')
+2024-11-08 16:18:52,874 - WARNING - Client ID 2 not found.
+2024-11-08 16:18:59,196 - ERROR - Integrity error in Contract.create: CHECK constraint failed: status IN ('Signed', 'Not Signed')
+2024-11-08 16:43:13,449 - WARNING - Failed authentication attempt for username: root.
+2024-11-08 16:43:24,133 - INFO - User root authenticated successfully.
+2024-11-08 16:43:24,134 - INFO - Role Management retrieved for user ID 1.
+2024-11-08 16:43:51,059 - WARNING - Client ID 2 not found.
+2024-11-08 16:43:59,406 - INFO - Contract ID 1 created for client ID 1.
+2024-11-08 16:43:59,407 - INFO - Contract created for client ID 1 by user ID 1.
+2024-11-08 16:52:14,889 - INFO - User root authenticated successfully.
+2024-11-08 16:52:14,890 - INFO - Role Management retrieved for user ID 1.
+2024-11-08 23:18:53,949 - INFO - User root with ID 1 updated.
+2024-11-09 00:19:39,252 - ERROR - An error occurred: module 'sentry_setup' has no attribute 'capture_exception'
+2024-11-09 09:59:38,926 - INFO - User root authenticated successfully.
+2024-11-09 09:59:38,927 - INFO - Role Management retrieved for user ID 1.
+2024-11-09 10:00:36,168 - WARNING - Contract ID 1 not found.
+2024-11-09 10:01:16,974 - WARNING - Client ID 1 not found.
+2024-11-09 10:02:09,840 - ERROR - An error occurred: module 'sentry_setup' has no attribute 'capture_exception'
+2024-11-09 10:04:55,866 - INFO - User root authenticated successfully.
+2024-11-09 10:04:55,867 - INFO - Role Management retrieved for user ID 1.
+2024-11-09 10:05:38,498 - INFO - Client john@gmail.com created with ID 1.
+2024-11-09 10:05:38,500 - INFO - Client John Last created by user ID 1.
+2024-11-09 10:05:48,081 - WARNING - Attempted to create duplicate client: John Last at Hallis.
+2024-11-09 10:06:48,624 - INFO - Contract ID 1 created for client ID 1.
+2024-11-09 10:06:48,626 - INFO - Contract created for client ID 1 by user ID 1.

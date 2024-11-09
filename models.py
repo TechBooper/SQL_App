@@ -12,7 +12,6 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
-
 class Database:
     DB_NAME = "app.db"
 
@@ -21,7 +20,6 @@ class Database:
         conn = sqlite3.connect(Database.DB_NAME)
         conn.row_factory = sqlite3.Row
         return conn
-
 
 # User model
 class User:
@@ -53,9 +51,17 @@ class User:
                 user_id = cursor.lastrowid
                 logging.info(f"User {username} created with ID {user_id}.")
                 return User.get_by_id(user_id)
+        except sqlite3.IntegrityError as e:
+            logging.error(f"Integrity error in User.create: {e}")
+            if 'username' in str(e):
+                return "A user with this username already exists."
+            elif 'email' in str(e):
+                return "A user with this email already exists."
+            else:
+                return "An error occurred while creating the user."
         except sqlite3.Error as e:
             logging.error(f"Database error in User.create: {e}")
-            return None
+            return "An error occurred while creating the user."
 
     @staticmethod
     def get_by_username(username):
@@ -103,7 +109,6 @@ class User:
         finally:
             conn.close()
 
-    # Update method should include the bio field in the query
     def update(self, password=None):
         try:
             with Database.connect() as conn:
@@ -123,19 +128,26 @@ class User:
                     )
 
                 cursor.execute(
-                    "UPDATE users SET username = ?, password_hash = ?, role_id = ?, email = ?, bio = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    "UPDATE users SET username = ?, password_hash = ?, role_id = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                     (
                         self.username,
                         password_hash_encoded,
                         self.role_id,
                         self.email,
-                        self.bio,
                         self.id,
                     ),
                 )
                 conn.commit()
                 logging.info(f"User {self.username} with ID {self.id} updated.")
                 return True
+        except sqlite3.IntegrityError as e:
+            logging.error(f"Integrity error in User.update: {e}")
+            if 'username' in str(e):
+                return "A user with this username already exists."
+            elif 'email' in str(e):
+                return "A user with this email already exists."
+            else:
+                return "An error occurred while updating the user."
         except sqlite3.Error as e:
             logging.error(f"Database error in User.update: {e}")
             return False
@@ -163,7 +175,6 @@ class User:
         except Exception as e:
             logging.error(f"Error verifying password for user {self.username}: {e}")
             return False
-
 
 # Role model
 class Role:
@@ -205,7 +216,6 @@ class Role:
         finally:
             conn.close()
 
-
 # Client model
 class Client:
     def __init__(
@@ -239,6 +249,19 @@ class Client:
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
+
+                # Pre-insertion check for existing client with same unique fields
+                cursor.execute(
+                    """SELECT id FROM clients WHERE first_name = ? AND last_name = ? AND company_name = ?""",
+                    (first_name, last_name, company_name),
+                )
+                existing_client = cursor.fetchone()
+                if existing_client:
+                    logging.warning(
+                        f"Attempted to create duplicate client: {first_name} {last_name} at {company_name}."
+                    )
+                    return "A client with this first name, last name, and company already exists."
+
                 cursor.execute(
                     """INSERT INTO clients (first_name, last_name, email, phone, company_name, sales_contact_id)
                     VALUES (?, ?, ?, ?, ?, ?)""",
@@ -257,7 +280,10 @@ class Client:
                 return Client.get_by_id(client_id)
         except sqlite3.IntegrityError as e:
             logging.error(f"Integrity error in Client.create: {e}")
-            return "Email already exists."
+            if 'email' in str(e):
+                return "A client with this email already exists."
+            else:
+                return "A client with this first name, last name, and company already exists."
         except sqlite3.Error as e:
             logging.error(f"Database error in Client.create: {e}")
             return "An error occurred while creating the client."
@@ -282,6 +308,19 @@ class Client:
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
+
+                # Pre-update check for existing client with same unique fields (excluding self)
+                cursor.execute(
+                    """SELECT id FROM clients WHERE first_name = ? AND last_name = ? AND company_name = ? AND id != ?""",
+                    (self.first_name, self.last_name, self.company_name, self.id),
+                )
+                existing_client = cursor.fetchone()
+                if existing_client:
+                    logging.warning(
+                        f"Attempted to update client to duplicate: {self.first_name} {self.last_name} at {self.company_name}."
+                    )
+                    return "Another client with this first name, last name, and company already exists."
+
                 cursor.execute(
                     """UPDATE clients SET first_name = ?, last_name = ?, email = ?, phone = ?, company_name = ?, last_contact = CURRENT_DATE, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?""",
@@ -297,6 +336,12 @@ class Client:
                 conn.commit()
                 logging.info(f"Client {self.email} with ID {self.id} updated.")
                 return True
+        except sqlite3.IntegrityError as e:
+            logging.error(f"Integrity error in Client.update: {e}")
+            if 'email' in str(e):
+                return "A client with this email already exists."
+            else:
+                return "Another client with this first name, last name, and company already exists."
         except sqlite3.Error as e:
             logging.error(f"Database error in Client.update: {e}")
             return False
@@ -312,7 +357,6 @@ class Client:
         except sqlite3.Error as e:
             logging.error(f"Database error in Client.delete: {e}")
             return False
-
 
 # Contract model
 class Contract:
@@ -343,6 +387,19 @@ class Contract:
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
+
+                # Pre-insertion check for existing contract with same unique fields
+                cursor.execute(
+                    """SELECT id FROM contracts WHERE client_id = ? AND total_amount = ? AND status = ? AND date_created = CURRENT_DATE""",
+                    (client_id, total_amount, status),
+                )
+                existing_contract = cursor.fetchone()
+                if existing_contract:
+                    logging.warning(
+                        f"Attempted to create duplicate contract for client ID {client_id}."
+                    )
+                    return "A contract with these details already exists for today."
+
                 cursor.execute(
                     """INSERT INTO contracts (client_id, sales_contact_id, total_amount, amount_remaining, status)
                     VALUES (?, ?, ?, ?, ?)""",
@@ -360,10 +417,21 @@ class Contract:
                     f"Contract ID {contract_id} created for client ID {client_id}."
                 )
                 return Contract.get_by_id(contract_id)
+        except sqlite3.IntegrityError as e:
+            error_message = str(e)
+            logging.error(f"Integrity error in Contract.create: {e}")
+            if 'UNIQUE constraint failed' in error_message:
+                return "A contract with these details already exists for today."
+            elif 'CHECK constraint failed' in error_message:
+                return "Invalid status value. Status must be 'Signed' or 'Not Signed'."
+            elif 'FOREIGN KEY constraint failed' in error_message:
+                return "Invalid client ID or sales contact ID."
+            else:
+                return f"An integrity error occurred: {error_message}"
         except sqlite3.Error as e:
             logging.error(f"Database error in Contract.create: {e}")
-            return None
-
+            return "Database error occurred while creating the contract."
+    
     @staticmethod
     def get_by_id(contract_id):
         try:
@@ -384,6 +452,25 @@ class Contract:
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
+
+                # Pre-update check for existing contract with same unique fields (excluding self)
+                cursor.execute(
+                    """SELECT id FROM contracts WHERE client_id = ? AND total_amount = ? AND status = ? AND date(created_at) = date(?) AND id != ?""",
+                    (
+                        self.client_id,
+                        self.total_amount,
+                        self.status,
+                        self.created_at,
+                        self.id,
+                    ),
+                )
+                existing_contract = cursor.fetchone()
+                if existing_contract:
+                    logging.warning(
+                        f"Attempted to update contract ID {self.id} to duplicate."
+                    )
+                    return "Another contract with these details already exists."
+
                 cursor.execute(
                     """UPDATE contracts SET client_id = ?, sales_contact_id = ?, total_amount = ?, amount_remaining = ?, status = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?""",
@@ -399,6 +486,9 @@ class Contract:
                 conn.commit()
                 logging.info(f"Contract ID {self.id} updated.")
                 return True
+        except sqlite3.IntegrityError as e:
+            logging.error(f"Integrity error in Contract.update: {e}")
+            return "Another contract with these details already exists."
         except sqlite3.Error as e:
             logging.error(f"Database error in Contract.update: {e}")
             return False
@@ -414,7 +504,6 @@ class Contract:
         except sqlite3.Error as e:
             logging.error(f"Database error in Contract.delete: {e}")
             return False
-
 
 # Event model
 class Event:
@@ -455,6 +544,19 @@ class Event:
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
+
+                # Pre-insertion check for existing event with same unique fields
+                cursor.execute(
+                    """SELECT id FROM events WHERE contract_id = ? AND event_date_start = ? AND event_date_end = ? AND location = ?""",
+                    (contract_id, event_date_start, event_date_end, location),
+                )
+                existing_event = cursor.fetchone()
+                if existing_event:
+                    logging.warning(
+                        f"Attempted to create duplicate event for contract ID {contract_id}."
+                    )
+                    return "An event with these details already exists."
+
                 cursor.execute(
                     """INSERT INTO events (contract_id, support_contact_id, event_date_start, event_date_end, location, attendees, notes)
                     VALUES (?, ?, ?, ?, ?, ?, ?)""",
@@ -474,6 +576,9 @@ class Event:
                     f"Event ID {event_id} created for contract ID {contract_id}."
                 )
                 return Event.get_by_id(event_id)
+        except sqlite3.IntegrityError as e:
+            logging.error(f"Integrity error in Event.create: {e}")
+            return "An event with these details already exists."
         except sqlite3.Error as e:
             logging.error(f"Database error in Event.create: {e}")
             return None
@@ -498,6 +603,25 @@ class Event:
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
+
+                # Pre-update check for existing event with same unique fields (excluding self)
+                cursor.execute(
+                    """SELECT id FROM events WHERE contract_id = ? AND event_date_start = ? AND event_date_end = ? AND location = ? AND id != ?""",
+                    (
+                        self.contract_id,
+                        self.event_date_start,
+                        self.event_date_end,
+                        self.location,
+                        self.id,
+                    ),
+                )
+                existing_event = cursor.fetchone()
+                if existing_event:
+                    logging.warning(
+                        f"Attempted to update event ID {self.id} to duplicate."
+                    )
+                    return "Another event with these details already exists."
+
                 cursor.execute(
                     """UPDATE events SET contract_id = ?, support_contact_id = ?, event_date_start = ?, event_date_end = ?, location = ?, attendees = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?""",
@@ -515,6 +639,9 @@ class Event:
                 conn.commit()
                 logging.info(f"Event ID {self.id} updated.")
                 return True
+        except sqlite3.IntegrityError as e:
+            logging.error(f"Integrity error in Event.update: {e}")
+            return "Another event with these details already exists."
         except sqlite3.Error as e:
             logging.error(f"Database error in Event.update: {e}")
             return False
@@ -530,7 +657,6 @@ class Event:
         except sqlite3.Error as e:
             logging.error(f"Database error in Event.delete: {e}")
             return False
-
 
 # Permission model
 class Permission:

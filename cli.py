@@ -279,11 +279,20 @@ def interactive_session(session):
 
             elif command == "create_contract":
                 if has_permission(session["user_id"], "contract", "create"):
-                    if len(command_parts) == 5:
+                    if len(command_parts) >= 5:
                         client_id = int(command_parts[1])
                         total_amount = float(command_parts[2])
                         amount_remaining = float(command_parts[3])
-                        status = command_parts[4]
+                        # Join the rest of the command_parts to capture 'status' even if it contains spaces
+                        status_input = " ".join(command_parts[4:]).strip().lower()
+                        # Normalize and validate status input
+                        if status_input in ['signed', 'not signed']:
+                            status = 'Signed' if status_input == 'signed' else 'Not Signed'
+                        else:
+                            print("Invalid status. Please enter 'Signed' or 'Not Signed'.")
+                            continue  # Return to the command prompt
+                        # For debugging: print the status value
+                        print(f"Status after processing: '{status}'")
                         result = create_contract(
                             user_id=session["user_id"],
                             client_id=client_id,
@@ -294,7 +303,7 @@ def interactive_session(session):
                         print(result)
                     else:
                         print(
-                            "Usage: create_contract <client_id> <total_amount> <amount_remaining> <status>"
+                            "Usage: create_contract <client_id> <total_amount> <amount_remaining> <status ('Signed'/'Not Signed')>"
                         )
                 else:
                     print("Permission denied.")
