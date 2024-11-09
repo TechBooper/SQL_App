@@ -81,7 +81,7 @@ def interactive_session(session):
                 print("  view_profile")
                 print("  update_profile <email>")
                 print(
-                    "  create_user <username> <password> <role_id> <email>  # Management only"
+                    "  create_user <username> <role_id> <email>  # Management only"
                 )
                 print(
                     "  update_user <user_id> <username> <email> <role_id>  # Management only"
