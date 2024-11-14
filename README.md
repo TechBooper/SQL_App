@@ -1,40 +1,42 @@
-Epic Events CRM CLI Application
+#Epic Events CRM CLI Application
+
 This is a Command-Line Interface (CLI) application for managing customer relationships at Epic Events, an event management company. The application allows users to manage clients, contracts, events, and users with role-based access control, only through a command terminal.
 
-Features
-User Authentication: Secure login and password hashing using bcrypt.
-Role-Based Access Control: Users have roles (Management, Commercial, Support) with specific permissions.
-Client Management: Create, update, delete, and view clients.
-Contract Management: Manage contracts associated with clients.
-Event Management: Schedule and manage events tied to contracts.
-User Management: Admin users can create, update, and delete user accounts.
-Database Initialization: Automatically creates and initializes the SQLite database.
-Logging: Logs operations and errors to log files.
-Error Tracking: Integrated with Sentry for error monitoring.
+#Features
 
-Installation
+-User Authentication: Secure login and password hashing using bcrypt.
+-Role-Based Access Control: Users have roles (Management, Commercial, Support) with specific permissions.
+-Client Management: Create, update, delete, and view clients.
+-Contract Management: Manage contracts associated with clients.
+-Event Management: Schedule and manage events tied to contracts.
+-User Management: Admin users can create, update, and delete user accounts.
+-Database Initialization: Automatically creates and initializes the SQLite database.
+-Logging: Logs operations and errors to log files.
+-Error Tracking: Integrated with Sentry for error monitoring.
+
+#Installation
 
 1. Clone the Repository
 
-git clone https://github.com/yourusername/epic-events-cli.git
-cd epic-events-cli
+'git clone https://github.com/yourusername/epic-events-cli.git'
+'cd epic-events-cli'
 
 2. Create a Virtual Environment
 
-python -m venv venv
+'python -m venv venv'
 
 3. Install Dependencies
 
-pip install -r requirements.txt
+'pip install -r requirements.txt'
 
 4. Initialize the Database
 
 Run the database.py script to create and initialize the SQLite database by inputting:
 
-python database.py
+'python database.py'
 
 
-Usage
+#Usage
 
 Run the CLI application using:
 
@@ -42,7 +44,8 @@ python cli.py login <username>
 
 Here's a compilation of the commands:
 
-Commands
+#Commands
+
 Once logged in, you can use the following commands:
 
 User Commands:
