@@ -1,6 +1,29 @@
-# .gitignore
+# Virtual environment
 venv/
+env/
+
+# Byte-compiled / cached files
 __pycache__/
 *.pyc
-app.db
+*.pyo
+*.pyd
+
+# Database files
+*.db
+*.sqlite3
+
+# Logs
+logs/
+*.log
+
+# Configuration files
+*.env
+
+# macOS specific files
 .DS_Store
+
+# VSCode specific files
+.vscode/
+
+# Diagrams and generated files
+*.drawio

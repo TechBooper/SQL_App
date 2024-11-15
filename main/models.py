@@ -1,4 +1,9 @@
-# models.py
+"""Models module for Epic Events CRM.
+
+This module defines the data models for the application, including User, Role,
+Client, Contract, Event, and Permission. Each model includes methods for CRUD
+operations and interactions with the SQLite database.
+"""
 
 import sqlite3
 import logging
@@ -12,18 +17,33 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
+
 class Database:
+    """Database connection handler for the application."""
+
     DB_NAME = "app.db"
 
     @staticmethod
     def connect():
+        """Establish a connection to the SQLite database.
+
+        Returns:
+            sqlite3.Connection: A connection object to the database.
+        """
         conn = sqlite3.connect(Database.DB_NAME)
         conn.row_factory = sqlite3.Row
         return conn
 
-# User model
+
 class User:
+    """Represents a user in the application."""
+
     def __init__(self, **kwargs):
+        """Initialize a User instance.
+
+        Args:
+            **kwargs: Arbitrary keyword arguments for user attributes.
+        """
         self.id = kwargs.get("id")
         self.username = kwargs.get("username")
         self.password_hash = kwargs.get("password_hash")
@@ -36,6 +56,17 @@ class User:
 
     @staticmethod
     def create(username, password, role_id, email):
+        """Create a new user in the database.
+
+        Args:
+            username (str): The username of the new user.
+            password (str): The plaintext password for the user.
+            role_id (int): The role ID to assign to the user.
+            email (str): The email address of the user.
+
+        Returns:
+            User or str: The created User object or an error message.
+        """
         try:
             # Hash the password using bcrypt
             password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
@@ -65,6 +96,14 @@ class User:
 
     @staticmethod
     def get_by_username(username):
+        """Retrieve a user by username.
+
+        Args:
+            username (str): The username to search for.
+
+        Returns:
+            User or None: The User object if found, else None.
+        """
         try:
             conn = Database.connect()
             cursor = conn.cursor()
@@ -88,6 +127,14 @@ class User:
 
     @staticmethod
     def get_by_id(user_id):
+        """Retrieve a user by ID.
+
+        Args:
+            user_id (int): The ID of the user.
+
+        Returns:
+            User or None: The User object if found, else None.
+        """
         try:
             conn = Database.connect()
             cursor = conn.cursor()
@@ -110,6 +157,14 @@ class User:
             conn.close()
 
     def update(self, password=None):
+        """Update the user's information in the database.
+
+        Args:
+            password (str, optional): New plaintext password. Defaults to None.
+
+        Returns:
+            bool or str: True if successful, False or error message otherwise.
+        """
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
@@ -153,6 +208,11 @@ class User:
             return False
 
     def delete(self):
+        """Delete the user from the database.
+
+        Returns:
+            bool: True if successful, False otherwise.
+        """
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
@@ -165,6 +225,14 @@ class User:
             return False
 
     def verify_password(self, password):
+        """Verify the user's password.
+
+        Args:
+            password (str): The plaintext password to verify.
+
+        Returns:
+            bool: True if the password matches, False otherwise.
+        """
         try:
             # Ensure the password is in bytes
             if isinstance(password, str):
@@ -176,14 +244,29 @@ class User:
             logging.error(f"Error verifying password for user {self.username}: {e}")
             return False
 
-# Role model
+
 class Role:
+    """Represents a role assigned to a user."""
+
     def __init__(self, **kwargs):
+        """Initialize a Role instance.
+
+        Args:
+            **kwargs: Arbitrary keyword arguments for role attributes.
+        """
         self.id = kwargs.get("id")
         self.name = kwargs.get("name")
 
     @staticmethod
     def get_by_id(role_id):
+        """Retrieve a role by ID.
+
+        Args:
+            role_id (int): The ID of the role.
+
+        Returns:
+            Role or None: The Role object if found, else None.
+        """
         try:
             conn = Database.connect()
             cursor = conn.cursor()
@@ -202,6 +285,14 @@ class Role:
 
     @staticmethod
     def get_by_name(name):
+        """Retrieve a role by name.
+
+        Args:
+            name (str): The name of the role.
+
+        Returns:
+            Role or None: The Role object if found, else None.
+        """
         try:
             conn = Database.connect()
             cursor = conn.cursor()
@@ -216,8 +307,10 @@ class Role:
         finally:
             conn.close()
 
-# Client model
+
 class Client:
+    """Represents a client in the application."""
+
     def __init__(
         self,
         id,
@@ -232,6 +325,21 @@ class Client:
         created_at=None,
         updated_at=None,
     ):
+        """Initialize a Client instance.
+
+        Args:
+            id (int): The ID of the client.
+            first_name (str): Client's first name.
+            last_name (str): Client's last name.
+            email (str): Client's email address.
+            phone (str): Client's phone number.
+            company_name (str): Client's company name.
+            date_created (str, optional): Date the client was created.
+            last_contact (str, optional): Date of last contact.
+            sales_contact_id (int, optional): ID of the sales contact.
+            created_at (str, optional): Timestamp of creation.
+            updated_at (str, optional): Timestamp of last update.
+        """
         self.id = id
         self.first_name = first_name
         self.last_name = last_name
@@ -246,6 +354,19 @@ class Client:
 
     @staticmethod
     def create(first_name, last_name, email, phone, company_name, sales_contact_id):
+        """Create a new client in the database.
+
+        Args:
+            first_name (str): Client's first name.
+            last_name (str): Client's last name.
+            email (str): Client's email address.
+            phone (str): Client's phone number.
+            company_name (str): Client's company name.
+            sales_contact_id (int): ID of the sales contact.
+
+        Returns:
+            Client or str: The created Client object or an error message.
+        """
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
@@ -290,6 +411,14 @@ class Client:
 
     @staticmethod
     def get_by_id(client_id):
+        """Retrieve a client by ID.
+
+        Args:
+            client_id (int): The ID of the client.
+
+        Returns:
+            Client or None: The Client object if found, else None.
+        """
         try:
             conn = Database.connect()
             cursor = conn.cursor()
@@ -305,6 +434,11 @@ class Client:
             conn.close()
 
     def update(self):
+        """Update the client's information in the database.
+
+        Returns:
+            bool or str: True if successful, False or error message otherwise.
+        """
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
@@ -347,6 +481,11 @@ class Client:
             return False
 
     def delete(self):
+        """Delete the client from the database.
+
+        Returns:
+            bool: True if successful, False otherwise.
+        """
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
@@ -358,8 +497,10 @@ class Client:
             logging.error(f"Database error in Client.delete: {e}")
             return False
 
-# Contract model
+
 class Contract:
+    """Represents a contract in the application."""
+
     def __init__(
         self,
         id,
@@ -372,6 +513,19 @@ class Contract:
         created_at=None,
         updated_at=None,
     ):
+        """Initialize a Contract instance.
+
+        Args:
+            id (int): The ID of the contract.
+            client_id (int): The ID of the associated client.
+            sales_contact_id (int): The ID of the sales contact.
+            total_amount (float): Total amount of the contract.
+            amount_remaining (float): Remaining amount.
+            date_created (str): Date the contract was created.
+            status (str): Status of the contract ('Signed' or 'Not Signed').
+            created_at (str, optional): Timestamp of creation.
+            updated_at (str, optional): Timestamp of last update.
+        """
         self.id = id
         self.client_id = client_id
         self.sales_contact_id = sales_contact_id
@@ -384,6 +538,18 @@ class Contract:
 
     @staticmethod
     def create(client_id, sales_contact_id, total_amount, amount_remaining, status):
+        """Create a new contract in the database.
+
+        Args:
+            client_id (int): The ID of the client.
+            sales_contact_id (int): The ID of the sales contact.
+            total_amount (float): Total amount of the contract.
+            amount_remaining (float): Remaining amount.
+            status (str): Status of the contract ('Signed' or 'Not Signed').
+
+        Returns:
+            Contract or str: The created Contract object or an error message.
+        """
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
@@ -431,9 +597,17 @@ class Contract:
         except sqlite3.Error as e:
             logging.error(f"Database error in Contract.create: {e}")
             return "Database error occurred while creating the contract."
-    
+
     @staticmethod
     def get_by_id(contract_id):
+        """Retrieve a contract by ID.
+
+        Args:
+            contract_id (int): The ID of the contract.
+
+        Returns:
+            Contract or None: The Contract object if found, else None.
+        """
         try:
             conn = Database.connect()
             cursor = conn.cursor()
@@ -449,6 +623,11 @@ class Contract:
             conn.close()
 
     def update(self):
+        """Update the contract's information in the database.
+
+        Returns:
+            bool or str: True if successful, False or error message otherwise.
+        """
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
@@ -494,6 +673,11 @@ class Contract:
             return False
 
     def delete(self):
+        """Delete the contract from the database.
+
+        Returns:
+            bool: True if successful, False otherwise.
+        """
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
@@ -505,8 +689,10 @@ class Contract:
             logging.error(f"Database error in Contract.delete: {e}")
             return False
 
-# Event model
+
 class Event:
+    """Represents an event in the application."""
+
     def __init__(
         self,
         id,
@@ -520,6 +706,20 @@ class Event:
         created_at=None,
         updated_at=None,
     ):
+        """Initialize an Event instance.
+
+        Args:
+            id (int): The ID of the event.
+            contract_id (int): The ID of the associated contract.
+            support_contact_id (int): The ID of the support contact.
+            event_date_start (str): Start date and time of the event.
+            event_date_end (str): End date and time of the event.
+            location (str): Location of the event.
+            attendees (int): Number of attendees.
+            notes (str): Additional notes.
+            created_at (str, optional): Timestamp of creation.
+            updated_at (str, optional): Timestamp of last update.
+        """
         self.id = id
         self.contract_id = contract_id
         self.support_contact_id = support_contact_id
@@ -541,6 +741,20 @@ class Event:
         attendees,
         notes,
     ):
+        """Create a new event in the database.
+
+        Args:
+            contract_id (int): The ID of the associated contract.
+            support_contact_id (int): The ID of the support contact.
+            event_date_start (str): Start date and time of the event.
+            event_date_end (str): End date and time of the event.
+            location (str): Location of the event.
+            attendees (int): Number of attendees.
+            notes (str): Additional notes.
+
+        Returns:
+            Event or str: The created Event object or an error message.
+        """
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
@@ -585,6 +799,14 @@ class Event:
 
     @staticmethod
     def get_by_id(event_id):
+        """Retrieve an event by ID.
+
+        Args:
+            event_id (int): The ID of the event.
+
+        Returns:
+            Event or None: The Event object if found, else None.
+        """
         try:
             conn = Database.connect()
             cursor = conn.cursor()
@@ -600,6 +822,11 @@ class Event:
             conn.close()
 
     def update(self):
+        """Update the event's information in the database.
+
+        Returns:
+            bool or str: True if successful, False or error message otherwise.
+        """
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
@@ -647,6 +874,11 @@ class Event:
             return False
 
     def delete(self):
+        """Delete the event from the database.
+
+        Returns:
+            bool: True if successful, False otherwise.
+        """
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
@@ -658,9 +890,19 @@ class Event:
             logging.error(f"Database error in Event.delete: {e}")
             return False
 
-# Permission model
+
 class Permission:
+    """Represents a permission assigned to a role."""
+
     def __init__(self, id, role_id, entity, action):
+        """Initialize a Permission instance.
+
+        Args:
+            id (int): The ID of the permission.
+            role_id (int): The ID of the associated role.
+            entity (str): The entity the permission applies to.
+            action (str): The action permitted (e.g., 'create', 'read').
+        """
         self.id = id
         self.role_id = role_id
         self.entity = entity
@@ -668,6 +910,14 @@ class Permission:
 
     @staticmethod
     def get_permissions_by_role(role_id):
+        """Retrieve permissions associated with a role.
+
+        Args:
+            role_id (int): The ID of the role.
+
+        Returns:
+            list: A list of Permission objects.
+        """
         try:
             conn = Database.connect()
             cursor = conn.cursor()

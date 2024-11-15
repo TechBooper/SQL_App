@@ -45,7 +45,7 @@ CREATE TABLE clients (
     UNIQUE (first_name, last_name, company_name)
 );
 
--- Contracts Table with additional constraints and data type changes
+-- Contracts Table with corrected constraints and data types
 CREATE TABLE contracts (
     id INTEGER PRIMARY KEY,
     client_id INTEGER NOT NULL,
@@ -53,14 +53,15 @@ CREATE TABLE contracts (
     total_amount DECIMAL(10, 2) NOT NULL CHECK (total_amount >= 0),
     amount_remaining DECIMAL(10, 2) NOT NULL CHECK (amount_remaining >= 0 AND amount_remaining <= total_amount),
     status TEXT NOT NULL CHECK (status IN ('Signed', 'Not Signed')),
+    date_created DATE DEFAULT (DATE('now')),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
     FOREIGN KEY (sales_contact_id) REFERENCES users(id) ON DELETE SET NULL,
-    UNIQUE (client_id, total_amount, status, DATE(created_at))
+    UNIQUE (client_id, total_amount, status, date_created)
 );
 
--- Events Table with UNIQUE constraint to prevent duplicates
+-- Events Table with corrected constraints
 CREATE TABLE events (
     id INTEGER PRIMARY KEY,
     contract_id INTEGER NOT NULL,
@@ -86,7 +87,7 @@ CREATE TABLE permissions (
     FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
 );
 
--- Insert permissions for management
+-- Insert permissions for Management role
 INSERT INTO permissions (role_id, entity, action) VALUES
     (1, 'client', 'create'),
     (1, 'client', 'update'),
@@ -105,7 +106,7 @@ INSERT INTO permissions (role_id, entity, action) VALUES
     (1, 'user', 'delete'),
     (1, 'user', 'read');
 
--- Insert permissions for commercial users
+-- Insert permissions for Commercial role
 INSERT INTO permissions (role_id, entity, action) VALUES
     (2, 'client', 'create'),
     (2, 'client', 'update'),
@@ -116,14 +117,14 @@ INSERT INTO permissions (role_id, entity, action) VALUES
     (2, 'event', 'create'),
     (2, 'event', 'read');
 
--- Insert permissions for support users
+-- Insert permissions for Support role
 INSERT INTO permissions (role_id, entity, action) VALUES
     (3, 'event', 'read'),
     (3, 'event', 'update'),
     (3, 'client', 'read'),
     (3, 'contract', 'read');
 
--- Create triggers to auto-update updated_at fields using BEFORE UPDATE
+-- Corrected triggers to auto-update updated_at fields using BEFORE UPDATE
 -- For users table
 CREATE TRIGGER update_users_updated_at
 BEFORE UPDATE ON users

@@ -1,3 +1,9 @@
+"""CLI application for Epic Events CRM.
+
+This module provides a command-line interface for the Epic Events CRM application.
+Users can authenticate and perform various operations based on their roles and permissions.
+"""
+
 import argparse
 import sys
 import getpass
@@ -25,7 +31,7 @@ from controllers import (
     filter_events_by_support_user,
 )
 import sentry_sdk
-import sentry_setup
+from configs import sentry_setup
 from models import User, Role
 
 logging.basicConfig(
@@ -36,6 +42,10 @@ logging.basicConfig(
 
 
 def main():
+    """Main entry point for the CLI application.
+
+    Parses command-line arguments and initiates the login process.
+    """
     parser = argparse.ArgumentParser(description="Epic Events CRM CLI")
     subparsers = parser.add_subparsers(dest="command")
 
@@ -64,6 +74,13 @@ def main():
 
 
 def interactive_session(session):
+    """Starts an interactive session for the authenticated user.
+
+    Processes user commands in a loop until the user logs out.
+
+    Args:
+        session (dict): Contains user session information, including user ID and role.
+    """
     print("Type 'help' to see available commands.")
     while True:
         try:
