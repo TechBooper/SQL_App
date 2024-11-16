@@ -85,13 +85,6 @@ def create_user(conn, username, password, role_id, email):
     Returns:
         None
     """
-    # Check if the password is strong enough
-    if not is_password_strong(password):
-        logging.warning(f"Password for user '{username}' is not strong enough.")
-        print(
-            "Password is not strong enough. It must be at least 8 characters long, contain upper and lower case letters, and include at least one number."
-        )
-        return
 
     # Hash the password using bcrypt
     password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
