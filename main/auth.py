@@ -3,6 +3,12 @@ import logging
 from models import User, Role
 import sqlite3
 
+import os
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+DATABASE_URL = os.path.join(BASE_DIR, 'database', 'app.db')
+
+conn = sqlite3.connect(DATABASE_URL)
+
 # Configure logging settings
 logging.basicConfig(
     filename="auth.log",  # Logs will be saved to auth.log file
@@ -74,8 +80,9 @@ def create_user(username, password, role_id, email):
         User: The created User object if successful, None otherwise.
     """
     try:
+        password_hash = hash_password(password)
         user = User.create(
-            username=username, password=password, role_id=role_id, email=email
+            username=username, password_hash=password_hash, role_id=role_id, email=email
         )
         if user:
             logging.info(

@@ -17,8 +17,13 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Access environment variables
-DATABASE_URL = os.getenv("DATABASE_URL", "app.db")  # Default to 'app.db' if not set
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+DATABASE_FOLDER = os.path.join(BASE_DIR, 'database')
+DATABASE_URL = os.path.join(DATABASE_FOLDER, "app.db")
+
+if not os.path.exists(DATABASE_FOLDER):
+    os.makedirs(DATABASE_FOLDER)  # Create the 'database' folder if it doesn't exist
+    
 DEBUG = os.getenv("DEBUG") == "True"
 SECRET_KEY = os.getenv("SECRET_KEY")
 
