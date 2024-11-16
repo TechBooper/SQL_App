@@ -20,8 +20,6 @@ This is a Command-Line Interface (CLI) application for managing customer relatio
 
 `git clone https://github.com/yourusername/epic-events-cli.git`
 
-`cd epic-events-cli`
-
 2. Create a Virtual Environment
 
 `python -m venv venv`
