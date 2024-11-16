@@ -21,23 +21,37 @@ def authenticate(username, password):
     """
     Authenticates a user by username and password.
 
-    Args:
-        username (str): The username of the user.
-        password (str): The password provided by the user.
-
     Returns:
         dict: A dictionary with user ID and role ID if authenticated, None otherwise.
     """
-    try:
-        user = User.get_by_username(username)
-        if user and bcrypt.checkpw(password.encode("utf-8"), user.password_hash):
-            logging.info("User %s authenticated successfully.", username)
-            return {"user_id": int(user.id), "role_id": int(user.role_id)}
-        logging.warning("Failed authentication attempt for username: %s.", username)
+    # Check if the database exists
+    if not os.path.exists(DATABASE_URL):
+        print("Database not found. Please initialize the database before proceeding.")
         return None
+
+    try:
+        conn = sqlite3.connect(DATABASE_URL)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, password_hash, role_id FROM users WHERE username = ?", (username,))
+        result = cursor.fetchone()
+        conn.close()
+
+        if result:
+            user_id, stored_hash_str, role_id = result
+            stored_hash = stored_hash_str.encode("utf-8")  # Encode to bytes
+            if bcrypt.checkpw(password.encode("utf-8"), stored_hash):
+                logging.info("User %s authenticated successfully.", username)
+                return {"user_id": user_id, "role_id": role_id}
+            else:
+                logging.warning("Failed authentication attempt for username: %s.", username)
+                return None
+        else:
+            logging.warning("User %s not found.", username)
+            return None
     except Exception as error:
         logging.error("Error during authentication for %s: %s", username, str(error))
         return None
+
 
 
 def get_user_role(user_id):
@@ -106,7 +120,8 @@ def hash_password(password):
     Returns:
         bytes: The hashed password.
     """
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+    return hashed.decode("utf-8")
 
 
 def has_permission(role_id, entity, action):

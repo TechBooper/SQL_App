@@ -10,6 +10,10 @@ import getpass
 import logging
 import os
 from auth import authenticate, get_user_role, hash_password, has_permission
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(BASE_DIR)
+
 from controllers import (
     create_user,
     update_user,
@@ -42,12 +46,19 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
+DATABASE_FOLDER = os.path.join(BASE_DIR, 'database')
+DATABASE_URL = os.path.join(DATABASE_FOLDER, 'app.db')
 
 def main():
     """Main entry point for the CLI application.
 
     Parses command-line arguments and initiates the login process.
     """
+    # Check if the database exists
+    if not os.path.exists(DATABASE_URL):
+        print("Database not found. Please initialize the database by running 'python database.py' before proceeding.")
+        sys.exit(1)
+
     parser = argparse.ArgumentParser(description="Epic Events CRM CLI")
     subparsers = parser.add_subparsers(dest="command")
 
