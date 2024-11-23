@@ -1,13 +1,25 @@
 import bcrypt
 import logging
-from models import User, Role
-import sqlite3
-
+from models import User, Role, Permission
+from dotenv import load_dotenv
 import os
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-DATABASE_URL = os.path.join(BASE_DIR, 'database', 'app.db')
 
-conn = sqlite3.connect(DATABASE_URL)
+# Load environment variables
+load_dotenv()
+
+# Get DATABASE_URL from environment variables
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+# If DATABASE_URL is not set, set a default path
+if not DATABASE_URL:
+    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    DATABASE_URL = os.path.join(BASE_DIR, 'database', 'app.db')
+
+# Ensure DATABASE_URL is an absolute path
+if not os.path.isabs(DATABASE_URL):
+    DATABASE_URL = os.path.abspath(DATABASE_URL)
+
+print(f"DATABASE_URL: {DATABASE_URL}")
 
 # Configure logging settings
 logging.basicConfig(
@@ -15,7 +27,6 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
-
 
 def authenticate(username, password):
     """
@@ -30,18 +41,11 @@ def authenticate(username, password):
         return None
 
     try:
-        conn = sqlite3.connect(DATABASE_URL)
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, password_hash, role_id FROM users WHERE username = ?", (username,))
-        result = cursor.fetchone()
-        conn.close()
-
-        if result:
-            user_id, stored_hash_str, role_id = result
-            stored_hash = stored_hash_str.encode("utf-8")  # Encode to bytes
-            if bcrypt.checkpw(password.encode("utf-8"), stored_hash):
+        user = User.get_by_username(username)
+        if user:
+            if user.verify_password(password):
                 logging.info("User %s authenticated successfully.", username)
-                return {"user_id": user_id, "role_id": role_id}
+                return {"user_id": user.id, "role_id": user.role_id}
             else:
                 logging.warning("Failed authentication attempt for username: %s.", username)
                 return None
@@ -51,8 +55,6 @@ def authenticate(username, password):
     except Exception as error:
         logging.error("Error during authentication for %s: %s", username, str(error))
         return None
-
-
 
 def get_user_role(user_id):
     """
@@ -79,7 +81,6 @@ def get_user_role(user_id):
         logging.error("Error retrieving role for user ID %s: %s", user_id, str(error))
         return None
 
-
 def create_user(username, password, role_id, email):
     """
     Creates a new user with the given details.
@@ -94,21 +95,16 @@ def create_user(username, password, role_id, email):
         User: The created User object if successful, None otherwise.
     """
     try:
-        password_hash = hash_password(password)
-        user = User.create(
-            username=username, password_hash=password_hash, role_id=role_id, email=email
-        )
-        if user:
-            logging.info(
-                "User %s created successfully with role ID %d.", username, role_id
-            )
+        user = User.create(username=username, password=password, role_id=role_id, email=email)
+        if isinstance(user, User):
+            logging.info("User %s created successfully with role ID %d.", username, role_id)
             return user
-        logging.error("Failed to create user %s.", username)
-        return None
+        else:
+            logging.error("Failed to create user %s: %s", username, user)
+            return None
     except Exception as error:
         logging.error("Error while creating user %s: %s", username, str(error))
         return None
-
 
 def hash_password(password):
     """
@@ -118,22 +114,25 @@ def hash_password(password):
         password (str): The plain-text password to hash.
 
     Returns:
-        bytes: The hashed password.
+        str: The hashed password.
     """
     hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
     return hashed.decode("utf-8")
 
-
 def has_permission(role_id, entity, action):
-    conn = sqlite3.connect("app.db")
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT 1 FROM permissions
-        WHERE role_id = ? AND entity = ? AND action = ?
-    """,
-        (role_id, entity, action),
-    )
-    result = cursor.fetchone()
-    conn.close()
-    return result is not None
+    """
+    Checks if a role has a specific permission.
+
+    Args:
+        role_id (int): The ID of the role.
+        entity (str): The entity to check permission for.
+        action (str): The action to check permission for.
+
+    Returns:
+        bool: True if the permission exists, False otherwise.
+    """
+    try:
+        return Permission.has_permission(role_id, entity, action)
+    except Exception as e:
+        logging.error(f"Error checking permission for role ID {role_id}: {e}")
+        return False

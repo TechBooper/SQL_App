@@ -1,3 +1,4 @@
 bcrypt==3.2.2
 sentry-sdk==1.28.1
 python-dotenv==1.0.1
+tabulate==0.9.0

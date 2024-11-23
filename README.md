@@ -23,6 +23,9 @@ This is a Command-Line Interface (CLI) application for managing customer relatio
 2. Create a Virtual Environment
 
 `python -m venv venv`
+- Create: `python -m venv venv`
+- Activation:
+- On Windows: `venv\Scripts\activate`
 
 3. Install Dependencies
 

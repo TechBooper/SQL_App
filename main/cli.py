@@ -9,7 +9,8 @@ import sys
 import getpass
 import logging
 import os
-from auth import authenticate, get_user_role, hash_password, has_permission
+from auth import authenticate, get_user_role
+from auth import has_permission  # Ensure this is imported if not already
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(BASE_DIR)
@@ -38,7 +39,8 @@ from controllers import (
 import sentry_sdk
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from configs import sentry_setup
-from models import User, Role
+from models import User, Role, Database
+from tabulate import tabulate
 
 logging.basicConfig(
     filename="cli.log",
@@ -48,6 +50,7 @@ logging.basicConfig(
 
 DATABASE_FOLDER = os.path.join(BASE_DIR, 'database')
 DATABASE_URL = os.path.join(DATABASE_FOLDER, 'app.db')
+
 
 def main():
     """Main entry point for the CLI application.
@@ -106,398 +109,526 @@ def interactive_session(session):
                 print("Logged out.")
                 break
             elif command == "help":
-                print("Available commands:")
-                print("  view_profile")
-                print("  update_profile <email>")
-                print(
-                    "  create_user <username> <role_id> <email>  # Management only"
-                )
-                print(
-                    "  update_user <user_id> <username> <email> <role_id>  # Management only"
-                )
-                print(
-                    "  delete_user <user_id>                                # Management only"
-                )
-                print(
-                    "  create_client <first_name> <last_name> <email> <phone> <company_name>  # Commercial only"
-                )
-                print(
-                    "  update_client <client_id> <first_name> <last_name> <email> <phone> <company_name>"
-                )
-                print(
-                    "  delete_client <client_id>                            # Management only"
-                )
-                print(
-                    "  create_contract <client_id> <total_amount> <amount_remaining> <status>"
-                )
-                print(
-                    "  update_contract <contract_id> <total_amount> <amount_remaining> <status>"
-                )
-                print(
-                    "  delete_contract <contract_id>                        # Management only"
-                )
-                print(
-                    "  create_event <contract_id> <event_date_start> <event_date_end> <location> <attendees> <notes>  # Commercial only"
-                )
-                print(
-                    "  update_event <event_id> <event_date_start> <event_date_end> <location> <attendees> <notes>"
-                )
-                print(
-                    "  assign_support <event_id> <support_user_id>          # Management only"
-                )
-                print("  view_clients")
-                print("  view_contracts")
-                print("  view_events")
-                print(
-                    "  filter_contracts <status>                            # Commercial only"
-                )
-                print(
-                    "  filter_events_unassigned                             # Management only"
-                )
-                print(
-                    "  filter_events_assigned_to_me                         # Support only"
-                )
-                print("  logout")
-            elif command == "view_profile":
-                if has_permission(session["role_id"], "user", "read"):
-                    user_id = session["user_id"]
-                    user = User.get_by_id(user_id)
-                    if user:
-                        print(f"User Profile:")
-                        print(f"  Username: {user.username}")
-                        print(f"  Email: {user.email}")
-                        print(f"  Role: {session['role']}")
-                    else:
-                        print("Error fetching user profile.")
-                else:
-                    print("Permission denied.")
-            elif command == "update_profile":
-                if has_permission(session["role_id"], "user", "update"):
-                    if len(command_parts) == 2:
-                        new_email = command_parts[1]
-                        user_id = session["user_id"]
-                        user = User.get_by_id(user_id)
-                        if user:
-                            user.email = new_email
-                            if user.update():
-                                print("Profile updated successfully.")
-                            else:
-                                print("Failed to update profile.")
-                        else:
-                            print("User not found.")
-                    else:
-                        print("Usage: update_profile <new_email>")
-                else:
-                    print("Permission denied.")
-            elif command == "create_user":
-                if has_permission(session["role_id"], "user", "create"):
-                    if len(command_parts) == 4:
-                        username = command_parts[1]
-                        role_id = int(command_parts[2])
-                        email = command_parts[3]
-                        password = getpass.getpass("Password: ")
-                        result = create_user(
-                            admin_user_id=session["user_id"],
-                            username=username,
-                            password=password,
-                            role_id=role_id,
-                            email=email,
-                        )
-                        print(result)
-                    else:
-                        print("Usage: create_user <username> <role_id> <email>")
-                else:
-                    print("Permission denied.")
-            elif command == "update_user":
-                if has_permission(session["role_id"], "user", "update"):
-                    if len(command_parts) == 5:
-                        user_id_to_update = int(command_parts[1])
-                        username = command_parts[2]
-                        email = command_parts[3]
-                        role_id = int(command_parts[4])
-                        result = update_user(
-                            admin_user_id=session["user_id"],
-                            user_id=user_id_to_update,
-                            username=username,
-                            email=email,
-                            role_id=role_id,
-                        )
-                        print(result)
-                    else:
-                        print(
-                            "Usage: update_user <user_id> <username> <email> <role_id>"
-                        )
-                else:
-                    print("Permission denied.")
-
-            elif command == "delete_user":
-                if has_permission(session["role_id"], "user", "delete"):
-                    if len(command_parts) == 2:
-                        user_id_to_delete = int(command_parts[1])
-                        result = delete_user(
-                            admin_user_id=session["user_id"], user_id=user_id_to_delete
-                        )
-                        print(result)
-                    else:
-                        print("Usage: delete_user <user_id>")
-                else:
-                    print("Permission denied.")
-
-            elif command == "create_client":
-                if has_permission(session["role_id"], "client", "create"):
-                    if len(command_parts) >= 6:
-                        first_name = command_parts[1]
-                        last_name = command_parts[2]
-                        email = command_parts[3]
-                        phone = command_parts[4]
-                        company_name = " ".join(command_parts[5:])
-                        result = create_client(
-                            user_id=session["user_id"],
-                            first_name=first_name,
-                            last_name=last_name,
-                            email=email,
-                            phone=phone,
-                            company_name=company_name,
-                        )
-                        print(result)
-                    else:
-                        print(
-                            "Usage: create_client <first_name> <last_name> <email> <phone> <company_name>"
-                        )
-                else:
-                    print("Permission denied.")
-
-            elif command == "update_client":
-                if has_permission(session["role_id"], "client", "update"):
-                    if len(command_parts) >= 7:
-                        client_id = int(command_parts[1])
-                        first_name = command_parts[2]
-                        last_name = command_parts[3]
-                        email = command_parts[4]
-                        phone = command_parts[5]
-                        company_name = " ".join(command_parts[6:])
-                        result = update_client(
-                            user_id=session["user_id"],
-                            client_id=client_id,
-                            first_name=first_name,
-                            last_name=last_name,
-                            email=email,
-                            phone=phone,
-                            company_name=company_name,
-                        )
-                        print(result)
-                    else:
-                        print(
-                            "Usage: update_client <client_id> <first_name> <last_name> <email> <phone> <company_name>"
-                        )
-                else:
-                    print("Permission denied.")
-
-            elif command == "delete_client":
-                if has_permission(session["role_id"], "client", "delete"):
-                    if len(command_parts) == 2:
-                        client_id = int(command_parts[1])
-                        result = delete_client(
-                            user_id=session["user_id"], client_id=client_id
-                        )
-                        print(result)
-                    else:
-                        print("Usage: delete_client <client_id>")
-                else:
-                    print("Permission denied.")
-
-            elif command == "create_contract":
-                if has_permission(session["role_id"], "contract", "create"):
-                    if len(command_parts) >= 5:
-                        client_id = int(command_parts[1])
-                        total_amount = float(command_parts[2])
-                        amount_remaining = float(command_parts[3])
-                        # Join the rest of the command_parts to capture 'status' even if it contains spaces
-                        status_input = " ".join(command_parts[4:]).strip().lower()
-                        # Normalize and validate status input
-                        if status_input in ['signed', 'not signed']:
-                            status = 'Signed' if status_input == 'signed' else 'Not Signed'
-                        else:
-                            print("Invalid status. Please enter 'Signed' or 'Not Signed'.")
-                            continue  # Return to the command prompt
-                        # For debugging: print the status value
-                        print(f"Status after processing: '{status}'")
-                        result = create_contract(
-                            user_id=session["user_id"],
-                            client_id=client_id,
-                            total_amount=total_amount,
-                            amount_remaining=amount_remaining,
-                            status=status,
-                        )
-                        print(result)
-                    else:
-                        print(
-                            "Usage: create_contract <client_id> <total_amount> <amount_remaining> <status ('Signed'/'Not Signed')>"
-                        )
-                else:
-                    print("Permission denied.")
-
-            elif command == "update_contract":
-                if has_permission(session["role_id"], "contract", "update"):
-                    if len(command_parts) == 5:
-                        contract_id = int(command_parts[1])
-                        total_amount = float(command_parts[2])
-                        amount_remaining = float(command_parts[3])
-                        status = command_parts[4]
-                        result = update_contract(
-                            user_id=session["user_id"],
-                            contract_id=contract_id,
-                            total_amount=total_amount,
-                            amount_remaining=amount_remaining,
-                            status=status,
-                        )
-                        print(result)
-                    else:
-                        print(
-                            "Usage: update_contract <contract_id> <total_amount> <amount_remaining> <status>"
-                        )
-                else:
-                    print("Permission denied.")
-
-            elif command == "delete_contract":
-                if has_permission(session["role_id"], "contract", "delete"):
-                    if len(command_parts) == 2:
-                        contract_id = int(command_parts[1])
-                        result = delete_contract(
-                            user_id=session["user_id"], contract_id=contract_id
-                        )
-                        print(result)
-                    else:
-                        print("Usage: delete_contract <contract_id>")
-                else:
-                    print("Permission denied.")
-
-            elif command == "create_event":
-                if has_permission(session["role_id"], "event", "create"):
-                    if len(command_parts) >= 7:
-                        contract_id = int(command_parts[1])
-                        event_date_start = command_parts[2]
-                        event_date_end = command_parts[3]
-                        location = command_parts[4]
-                        attendees = int(command_parts[5])
-                        notes = " ".join(command_parts[6:])
-                        result = create_event(
-                            user_id=session["user_id"],
-                            contract_id=contract_id,
-                            event_date_start=event_date_start,
-                            event_date_end=event_date_end,
-                            location=location,
-                            attendees=attendees,
-                            notes=notes,
-                        )
-                        print(result)
-                    else:
-                        print(
-                            "Usage: create_event <contract_id> <event_date_start> <event_date_end> <location> <attendees> <notes>"
-                        )
-                else:
-                    print("Permission denied.")
-
-            elif command == "update_event":
-                if has_permission(session["role_id"], "event", "update"):
-                    if len(command_parts) >= 7:
-                        event_id = int(command_parts[1])
-                        event_date_start = command_parts[2]
-                        event_date_end = command_parts[3]
-                        location = command_parts[4]
-                        attendees = int(command_parts[5])
-                        notes = " ".join(command_parts[6:])
-                        result = update_event(
-                            user_id=session["user_id"],
-                            event_id=event_id,
-                            event_date_start=event_date_start,
-                            event_date_end=event_date_end,
-                            location=location,
-                            attendees=attendees,
-                            notes=notes,
-                        )
-                        print(result)
-                    else:
-                        print(
-                            "Usage: update_event <event_id> <event_date_start> <event_date_end> <location> <attendees> <notes>"
-                        )
-                else:
-                    print("Permission denied.")
-
-            elif command == "assign_support":
-                if has_permission(session["role_id"], "event", "update"):
-                    if len(command_parts) == 3:
-                        event_id = int(command_parts[1])
-                        support_user_id = int(command_parts[2])
-                        result = assign_support_to_event(
-                            user_id=session["user_id"],
-                            event_id=event_id,
-                            support_user_id=support_user_id,
-                        )
-                        print(result)
-                    else:
-                        print("Usage: assign_support <event_id> <support_user_id>")
-                else:
-                    print("Permission denied.")
-
-            elif command == "view_clients":
-                if has_permission(session["role_id"], "client", "read"):
-                    clients = get_all_clients()
-                    for client in clients:
-                        print(client)
-                else:
-                    print("Permission denied.")
-
-            elif command == "view_contracts":
-                if has_permission(session["role_id"], "contract", "read"):
-                    contracts = get_all_contracts()
-                    for contract in contracts:
-                        print(contract)
-                else:
-                    print("Permission denied.")
-
-            elif command == "view_events":
-                if has_permission(session["role_id"], "event", "read"):
-                    events = get_all_events(session["user_id"])
-                    for event in events:
-                        print(event)
-                else:
-                    print("Permission denied.")
-
-            elif command == "filter_contracts":
-                if has_permission(session["role_id"], "contract", "read"):
-                    if len(command_parts) == 2:
-                        status = command_parts[1]
-                        contracts = filter_contracts_by_status(status)
-                        for contract in contracts:
-                            print(contract)
-                    else:
-                        print("Usage: filter_contracts <status>")
-                else:
-                    print("Permission denied.")
-
-            elif command == "filter_events_unassigned":
-                if has_permission(session["role_id"], "event", "read"):
-                    events = filter_events_unassigned()
-                    for event in events:
-                        print(event)
-                else:
-                    print("Permission denied.")
-
-            elif command == "filter_events_assigned_to_me":
-                if has_permission(session["role_id"], "event", "read"):
-                    events = filter_events_by_support_user(session["user_id"])
-                    for event in events:
-                        print(event)
-                else:
-                    print("Permission denied.")
-
+                print_available_commands()
+            elif command in command_dispatcher:
+                handler = command_dispatcher[command]
+                handler(session, command_parts)
             else:
                 print("Unknown command. Type 'help' to see available commands.")
         except Exception as e:
-            sentry_setup.capture_exception(e)
+            sentry_sdk.capture_exception(e)
             logging.error(f"An error occurred: {e}")
             print("An error occurred while processing your command.")
+
+
+def print_available_commands():
+    print("Available commands:")
+    print("  view_profile")
+    print("  update_profile <email>")
+    print("  create_user <username> <role_id> <email>  # Management only")
+    print("  update_user <user_id> <username> <email> <role_id>  # Management only")
+    print("  delete_user <user_id>                                # Management only")
+    print("  create_client <first_name> <last_name> <email> <phone> <company_name>  # Commercial only")
+    print("  update_client <client_id> <first_name> <last_name> <email> <phone> <company_name>")
+    print("  delete_client <client_id>                            # Management only")
+    print("  create_contract <client_id> <total_amount> <amount_remaining> <status>")
+    print("  update_contract <contract_id> <total_amount> <amount_remaining> <status>")
+    print("  delete_contract <contract_id>                        # Management only")
+    print("  create_event <contract_id> <event_date_start> <event_date_end> <location> <attendees> <notes>  # Commercial only")
+    print("  update_event <event_id> <event_date_start> <event_date_end> <location> <attendees> <notes>")
+    print("  delete_event <event_id>                              # Management only")
+    print("  assign_support <event_id> <support_user_id>          # Management only")
+    print("  view_clients")
+    print("  view_contracts")
+    print("  view_events")
+    print("  filter_contracts <status>                            # Commercial only")
+    print("  filter_events_unassigned                             # Management only")
+    print("  filter_events_assigned_to_me                         # Support only")
+    print("  logout")
+
+
+def handle_view_profile(session, command_parts):
+    if has_permission(session["role_id"], "user", "read"):
+        user_id = session["user_id"]
+        user = User.get_by_id(user_id)
+        if user:
+            print(f"User Profile:")
+            print(f"  Username: {user.username}")
+            print(f"  Email: {user.email}")
+            print(f"  Role: {session['role']}")
+        else:
+            print("Error fetching user profile.")
+    else:
+        print("Permission denied.")
+
+
+def handle_update_profile(session, command_parts):
+    if has_permission(session["role_id"], "user", "update"):
+        if len(command_parts) == 2:
+            new_email = command_parts[1]
+            user_id = session["user_id"]
+            user = User.get_by_id(user_id)
+            if user:
+                user.email = new_email
+                if user.update():
+                    print("Profile updated successfully.")
+                else:
+                    print("Failed to update profile.")
+            else:
+                print("User not found.")
+        else:
+            print("Usage: update_profile <new_email>")
+    else:
+        print("Permission denied.")
+
+
+def handle_create_user(session, command_parts):
+    if has_permission(session["role_id"], "user", "create"):
+        if len(command_parts) == 4:
+            username = command_parts[1]
+            role_id = int(command_parts[2])
+            email = command_parts[3]
+            password = getpass.getpass("Password: ")
+            result = create_user(
+                admin_user_id=session["user_id"],
+                username=username,
+                password=password,
+                role_id=role_id,
+                email=email,
+            )
+            print(result)
+        else:
+            print("Usage: create_user <username> <role_id> <email>")
+    else:
+        print("Permission denied.")
+
+
+def handle_update_user(session, command_parts):
+    if has_permission(session["role_id"], "user", "update"):
+        if len(command_parts) == 5:
+            user_id_to_update = int(command_parts[1])
+            username = command_parts[2]
+            email = command_parts[3]
+            role_id = int(command_parts[4])
+            result = update_user(
+                admin_user_id=session["user_id"],
+                user_id=user_id_to_update,
+                username=username,
+                email=email,
+                role_id=role_id,
+            )
+            print(result)
+        else:
+            print("Usage: update_user <user_id> <username> <email> <role_id>")
+    else:
+        print("Permission denied.")
+
+
+def handle_delete_user(session, command_parts):
+    if has_permission(session["role_id"], "user", "delete"):
+        if len(command_parts) == 2:
+            user_id_to_delete = int(command_parts[1])
+            result = delete_user(
+                admin_user_id=session["user_id"], user_id=user_id_to_delete
+            )
+            print(result)
+        else:
+            print("Usage: delete_user <user_id>")
+    else:
+        print("Permission denied.")
+
+
+def handle_create_client(session, command_parts):
+    if has_permission(session["role_id"], "client", "create"):
+        if len(command_parts) >= 6:
+            first_name = command_parts[1]
+            last_name = command_parts[2]
+            email = command_parts[3]
+            phone = command_parts[4]
+            company_name = " ".join(command_parts[5:])
+            result = create_client(
+                user_id=session["user_id"],
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                phone=phone,
+                company_name=company_name,
+            )
+            print(result)
+        else:
+            print("Usage: create_client <first_name> <last_name> <email> <phone> <company_name>")
+    else:
+        print("Permission denied.")
+
+
+def handle_update_client(session, command_parts):
+    if has_permission(session["role_id"], "client", "update"):
+        if len(command_parts) >= 7:
+            client_id = int(command_parts[1])
+            first_name = command_parts[2]
+            last_name = command_parts[3]
+            email = command_parts[4]
+            phone = command_parts[5]
+            company_name = " ".join(command_parts[6:])
+            result = update_client(
+                user_id=session["user_id"],
+                client_id=client_id,
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                phone=phone,
+                company_name=company_name,
+            )
+            print(result)
+        else:
+            print("Usage: update_client <client_id> <first_name> <last_name> <email> <phone> <company_name>")
+    else:
+        print("Permission denied.")
+
+
+def handle_delete_client(session, command_parts):
+    if has_permission(session["role_id"], "client", "delete"):
+        if len(command_parts) == 2:
+            client_id = int(command_parts[1])
+            result = delete_client(
+                user_id=session["user_id"], client_id=client_id
+            )
+            print(result)
+        else:
+            print("Usage: delete_client <client_id>")
+    else:
+        print("Permission denied.")
+
+
+def handle_create_contract(session, command_parts):
+    if has_permission(session["role_id"], "contract", "create"):
+        if len(command_parts) >= 5:
+            client_id = int(command_parts[1])
+            total_amount = float(command_parts[2])
+            amount_remaining = float(command_parts[3])
+            status_input = " ".join(command_parts[4:]).strip().lower()
+            if status_input in ['signed', 'not signed']:
+                status = 'Signed' if status_input == 'signed' else 'Not Signed'
+            else:
+                print("Invalid status. Please enter 'Signed' or 'Not Signed'.")
+                return
+            result = create_contract(
+                user_id=session["user_id"],
+                client_id=client_id,
+                total_amount=total_amount,
+                amount_remaining=amount_remaining,
+                status=status,
+            )
+            print(result)
+        else:
+            print("Usage: create_contract <client_id> <total_amount> <amount_remaining> <status ('Signed'/'Not Signed')>")
+    else:
+        print("Permission denied.")
+
+
+def handle_update_contract(session, command_parts):
+    if has_permission(session["role_id"], "contract", "update"):
+        if len(command_parts) >= 5:
+            contract_id = int(command_parts[1])
+            total_amount = float(command_parts[2])
+            amount_remaining = float(command_parts[3])
+            status_input = " ".join(command_parts[4:]).strip().lower()
+            if status_input in ['signed', 'not signed']:
+                status = 'Signed' if status_input == 'signed' else 'Not Signed'
+            else:
+                print("Invalid status. Please enter 'Signed' or 'Not Signed'.")
+                return
+            result = update_contract(
+                user_id=session["user_id"],
+                contract_id=contract_id,
+                total_amount=total_amount,
+                amount_remaining=amount_remaining,
+                status=status,
+            )
+            print(result)
+        else:
+            print("Usage: update_contract <contract_id> <total_amount> <amount_remaining> <status ('Signed'/'Not Signed')>")
+    else:
+        print("Permission denied.")
+
+
+def handle_delete_contract(session, command_parts):
+    if has_permission(session["role_id"], "contract", "delete"):
+        if len(command_parts) == 2:
+            contract_id = int(command_parts[1])
+            result = delete_contract(
+                user_id=session["user_id"], contract_id=contract_id
+            )
+            print(result)
+        else:
+            print("Usage: delete_contract <contract_id>")
+    else:
+        print("Permission denied.")
+
+
+def handle_create_event(session, command_parts):
+    if has_permission(session["role_id"], "event", "create"):
+        if len(command_parts) >= 7:
+            contract_id = int(command_parts[1])
+            event_date_start = command_parts[2]
+            event_date_end = command_parts[3]
+            location = command_parts[4]
+            attendees = int(command_parts[5])
+            notes = " ".join(command_parts[6:])
+            result = create_event(
+                user_id=session["user_id"],
+                contract_id=contract_id,
+                event_date_start=event_date_start,
+                event_date_end=event_date_end,
+                location=location,
+                attendees=attendees,
+                notes=notes,
+            )
+            print(result)
+        else:
+            print("Usage: create_event <contract_id> <event_date_start> <event_date_end> <location> <attendees> <notes>")
+    else:
+        print("Permission denied.")
+
+
+def handle_update_event(session, command_parts):
+    if has_permission(session["role_id"], "event", "update"):
+        if len(command_parts) >= 7:
+            event_id = int(command_parts[1])
+            event_date_start = command_parts[2]
+            event_date_end = command_parts[3]
+            location = command_parts[4]
+            attendees = int(command_parts[5])
+            notes = " ".join(command_parts[6:])
+            result = update_event(
+                user_id=session["user_id"],
+                event_id=event_id,
+                event_date_start=event_date_start,
+                event_date_end=event_date_end,
+                location=location,
+                attendees=attendees,
+                notes=notes,
+            )
+            print(result)
+        else:
+            print("Usage: update_event <event_id> <event_date_start> <event_date_end> <location> <attendees> <notes>")
+    else:
+        print("Permission denied.")
+
+
+def handle_delete_event(session, command_parts):
+    if has_permission(session["role_id"], "event", "delete"):
+        if len(command_parts) == 2:
+            event_id = int(command_parts[1])
+            result = delete_event(
+                user_id=session["user_id"], event_id=event_id
+            )
+            print(result)
+        else:
+            print("Usage: delete_event <event_id>")
+    else:
+        print("Permission denied.")
+
+
+def handle_assign_support(session, command_parts):
+    if has_permission(session["role_id"], "event", "update"):
+        if len(command_parts) == 3:
+            event_id = int(command_parts[1])
+            support_user_id = int(command_parts[2])
+            result = assign_support_to_event(
+                user_id=session["user_id"],
+                event_id=event_id,
+                support_user_id=support_user_id,
+            )
+            print(result)
+        else:
+            print("Usage: assign_support <event_id> <support_user_id>")
+    else:
+        print("Permission denied.")
+
+
+def handle_view_clients(session, command_parts):
+    if has_permission(session["role_id"], "client", "read"):
+        clients = get_all_clients()
+        if not clients:
+            print("No clients found.")
+            return
+        headers = ["ID", "First Name", "Last Name", "Email", "Phone", "Company Name", "Last Contact", "Sales Contact ID", "Created At", "Updated At"]
+        table = []
+        for client in clients:
+            table.append([
+                client['id'],
+                client['first_name'],
+                client['last_name'],
+                client['email'],
+                client['phone'],
+                client['company_name'],
+                client['last_contact'],
+                client['sales_contact_id'],
+                client['created_at'],
+                client['updated_at']
+            ])
+        print(tabulate(table, headers=headers, tablefmt="grid"))
+    else:
+        print("Permission denied.")
+
+
+def handle_view_contracts(session, command_parts):
+    if has_permission(session["role_id"], "contract", "read"):
+        contracts = get_all_contracts()
+        if not contracts:
+            print("No contracts found.")
+            return
+        headers = ["ID", "Client ID", "Sales Contact ID", "Total Amount", "Amount Remaining", "Status", "Created At", "Updated At"]
+        table = []
+        for contract in contracts:
+            table.append([
+                contract['id'],
+                contract['client_id'],
+                contract['sales_contact_id'],
+                contract['total_amount'],
+                contract['amount_remaining'],
+                contract['status'],
+                contract['created_at'],
+                contract['updated_at']
+            ])
+        print(tabulate(table, headers=headers, tablefmt="grid"))
+    else:
+        print("Permission denied.")
+
+
+def handle_view_events(session, command_parts):
+    if has_permission(session["role_id"], "event", "read"):
+        events = get_all_events(session["user_id"])
+        if not events:
+            print("No events found.")
+            return
+        headers = ["ID", "Contract ID", "Support Contact ID", "Start Date", "End Date", "Location", "Attendees", "Notes", "Created At", "Updated At"]
+        table = []
+        for event in events:
+            table.append([
+                event['id'],
+                event['contract_id'],
+                event['support_contact_id'],
+                event['event_date_start'],
+                event['event_date_end'],
+                event['location'],
+                event['attendees'],
+                event['notes'],
+                event['created_at'],
+                event['updated_at']
+            ])
+        print(tabulate(table, headers=headers, tablefmt="grid"))
+    else:
+        print("Permission denied.")
+
+
+def handle_filter_contracts(session, command_parts):
+    if has_permission(session["role_id"], "contract", "read"):
+        if len(command_parts) >= 2:
+            status = " ".join(command_parts[1:]).strip().lower()
+            if status in ['signed', 'not signed']:
+                contracts = filter_contracts_by_status(status.capitalize())
+                if not contracts:
+                    print(f"No contracts found with status '{status.capitalize()}'.")
+                    return
+                headers = ["ID", "Client ID", "Sales Contact ID", "Total Amount", "Amount Remaining", "Status", "Created At", "Updated At"]
+                table = []
+                for contract in contracts:
+                    table.append([
+                        contract['id'],
+                        contract['client_id'],
+                        contract['sales_contact_id'],
+                        contract['total_amount'],
+                        contract['amount_remaining'],
+                        contract['status'],
+                        contract['created_at'],
+                        contract['updated_at']
+                    ])
+                print(tabulate(table, headers=headers, tablefmt="grid"))
+            else:
+                print("Invalid status. Please enter 'Signed' or 'Not Signed'.")
+        else:
+            print("Usage: filter_contracts <status ('Signed'/'Not Signed')>")
+    else:
+        print("Permission denied.")
+
+
+def handle_filter_events_unassigned(session, command_parts):
+    if has_permission(session["role_id"], "event", "read"):
+        events = filter_events_unassigned()
+        if not events:
+            print("No unassigned events found.")
+            return
+        headers = ["ID", "Contract ID", "Start Date", "End Date", "Location", "Attendees", "Notes", "Created At", "Updated At"]
+        table = []
+        for event in events:
+            table.append([
+                event['id'],
+                event['contract_id'],
+                event['event_date_start'],
+                event['event_date_end'],
+                event['location'],
+                event['attendees'],
+                event['notes'],
+                event['created_at'],
+                event['updated_at']
+            ])
+        print(tabulate(table, headers=headers, tablefmt="grid"))
+    else:
+        print("Permission denied.")
+
+
+def handle_filter_events_assigned_to_me(session, command_parts):
+    if has_permission(session["role_id"], "event", "read"):
+        events = filter_events_by_support_user(session["user_id"])
+        if not events:
+            print("No events assigned to you.")
+            return
+        headers = ["ID", "Contract ID", "Start Date", "End Date", "Location", "Attendees", "Notes", "Created At", "Updated At"]
+        table = []
+        for event in events:
+            table.append([
+                event['id'],
+                event['contract_id'],
+                event['event_date_start'],
+                event['event_date_end'],
+                event['location'],
+                event['attendees'],
+                event['notes'],
+                event['created_at'],
+                event['updated_at']
+            ])
+        print(tabulate(table, headers=headers, tablefmt="grid"))
+    else:
+        print("Permission denied.")
+
+
+# Command dispatcher mapping commands to handlers
+command_dispatcher = {
+    "view_profile": handle_view_profile,
+    "update_profile": handle_update_profile,
+    "create_user": handle_create_user,
+    "update_user": handle_update_user,
+    "delete_user": handle_delete_user,
+    "create_client": handle_create_client,
+    "update_client": handle_update_client,
+    "delete_client": handle_delete_client,
+    "create_contract": handle_create_contract,
+    "update_contract": handle_update_contract,
+    "delete_contract": handle_delete_contract,
+    "create_event": handle_create_event,
+    "update_event": handle_update_event,
+    "delete_event": handle_delete_event,
+    "assign_support": handle_assign_support,
+    "view_clients": handle_view_clients,
+    "view_contracts": handle_view_contracts,
+    "view_events": handle_view_events,
+    "filter_contracts": handle_filter_contracts,
+    "filter_events_unassigned": handle_filter_events_unassigned,
+    "filter_events_assigned_to_me": handle_filter_events_assigned_to_me,
+    # Add other commands as needed
+}
 
 
 if __name__ == "__main__":
