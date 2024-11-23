@@ -13,9 +13,9 @@ import os
 import getpass
 import sys
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),))
 DATABASE_FOLDER = os.path.join(BASE_DIR, 'database')
-DATABASE_URL = os.path.join(DATABASE_FOLDER, "app.db")
+DATABASE_URL = os.path.join(DATABASE_FOLDER, 'app.db')
 
 if not os.path.exists(DATABASE_FOLDER):
     os.makedirs(DATABASE_FOLDER)  # Create the 'database' folder if it doesn't exist
