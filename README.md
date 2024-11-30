@@ -40,7 +40,7 @@ Run the CLI application using:
 
 Profile Management:
 
-View Profile: View your user profile information.
+awView Profile: View your user profile information.
 Update Profile: Update your email address.
 
 User Management (Management Role Only)
@@ -79,6 +79,7 @@ Notes
 Permissions: The options available to you in the menus depend on your user role and permissions.
 Validation: The application validates your inputs and provides feedback if there's an error.
 Logging: Operations are logged for auditing purposes.
+
 Troubleshooting
 
 Database Not Found: If you receive a "Database not found" error, ensure you've initialized the database by running python database.py.
