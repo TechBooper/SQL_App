@@ -4,18 +4,10 @@ from models import User, Role, Permission
 from dotenv import load_dotenv
 import os
 
-# Load environment variables
-load_dotenv()
 
-# Get DATABASE_URL from environment variables
-DATABASE_URL = os.getenv('DATABASE_URL')
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+DATABASE_URL = os.path.join(BASE_DIR, 'database', 'app.db')
 
-# If DATABASE_URL is not set, set a default path
-if not DATABASE_URL:
-    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    DATABASE_URL = os.path.join(BASE_DIR, 'database', 'app.db')
-
-# Ensure DATABASE_URL is an absolute path
 if not os.path.isabs(DATABASE_URL):
     DATABASE_URL = os.path.abspath(DATABASE_URL)
 
@@ -35,10 +27,6 @@ def authenticate(username, password):
     Returns:
         dict: A dictionary with user ID and role ID if authenticated, None otherwise.
     """
-    # Check if the database exists
-    if not os.path.exists(DATABASE_URL):
-        print("Database not found. Please initialize the database before proceeding.")
-        return None
 
     try:
         user = User.get_by_username(username)
