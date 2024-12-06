@@ -1,7 +1,6 @@
 import bcrypt
 import logging
 from models import User, Role, Permission
-from dotenv import load_dotenv
 import os
 
 

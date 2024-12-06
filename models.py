@@ -1,4 +1,5 @@
-"""Models module for Epic Events CRM.
+"""
+Models module for Epic Events CRM.
 
 This module defines the data models for the application, including User, Role,
 Client, Contract, Event, and Permission. Each model includes methods for CRUD
@@ -10,22 +11,6 @@ import logging
 import bcrypt
 import os
 from datetime import datetime
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
-
-# Get DATABASE_URL from environment variables
-DATABASE_URL = os.getenv('DATABASE_URL')
-
-# If DATABASE_URL is not set, set a default path
-if not DATABASE_URL:
-    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    DATABASE_URL = os.path.join(BASE_DIR, 'database', 'app.db')
-
-# Ensure DATABASE_URL is an absolute path
-if not os.path.isabs(DATABASE_URL):
-    DATABASE_URL = os.path.abspath(DATABASE_URL)
 
 # Configure logging
 logging.basicConfig(
@@ -33,6 +18,14 @@ logging.basicConfig(
     level=logging.DEBUG,  # Set to DEBUG to capture detailed logs
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
+
+# Set DATABASE_URL to default path
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+DATABASE_URL = os.path.join(BASE_DIR, 'database', 'app.db')
+
+# Ensure DATABASE_URL is an absolute path
+if not os.path.isabs(DATABASE_URL):
+    DATABASE_URL = os.path.abspath(DATABASE_URL)
 
 class Database:
     """Database connection handler for the application."""

@@ -20,6 +20,11 @@ This is a Command-Line Interface (CLI) application for managing customer relatio
 
 `git clone https://github.com/epic-events/epic-events-cli.git`
 
+2. Set up virtual env
+
+`python -m venv venv`
+`source venv/bin/activate`  # Windows: venv\Scripts\activate
+
 2. Install Dependencies
 
 `pip install -r requirements.txt`

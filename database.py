@@ -13,14 +13,16 @@ import os
 import getpass
 import sys
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),))
+# Use the current working directory as the base directory
+BASE_DIR = os.path.abspath(os.getcwd())
 DATABASE_FOLDER = os.path.join(BASE_DIR, 'database')
 DATABASE_URL = os.path.join(DATABASE_FOLDER, 'app.db')
 
 if not os.path.exists(DATABASE_FOLDER):
     os.makedirs(DATABASE_FOLDER)  # Create the 'database' folder if it doesn't exist
 
-DEBUG = os.getenv("DEBUG") == "True"
+# Set DEBUG to False by default if the environment variable is not set
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 # Configure logging to output to a file
 logging.basicConfig(
