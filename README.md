@@ -45,7 +45,7 @@ Run the CLI application using:
 
 Profile Management:
 
-awView Profile: View your user profile information.
+View Profile: View your user profile information.
 Update Profile: Update your email address.
 
 User Management (Management Role Only)

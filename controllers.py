@@ -68,6 +68,7 @@ def has_permission(user_id, entity, action, resource_owner_id=None):
 
 # CRUD operations
 
+
 def create_client(user_id, first_name, last_name, email, phone, company_name):
     """Create a new client.
 
@@ -424,7 +425,9 @@ def update_event(user_id, event_id, **kwargs):
 
         result = event.update()
         if result is True:
-            logging.info(f"Event ID {event_id} updated successfully by user ID {user_id}.")
+            logging.info(
+                f"Event ID {event_id} updated successfully by user ID {user_id}."
+            )
             return f"Event ID {event_id} updated successfully."
         elif isinstance(result, str):
             # An error message was returned from the model
@@ -548,7 +551,9 @@ def create_user(admin_user_id, username, password, role_id, email):
         return "Database error."
 
 
-def update_user(admin_user_id, user_id, username=None, password=None, role_id=None, email=None):
+def update_user(
+    admin_user_id, user_id, username=None, password=None, role_id=None, email=None
+):
     """Update an existing user's information.
 
     Args:
@@ -577,7 +582,9 @@ def update_user(admin_user_id, user_id, username=None, password=None, role_id=No
             user.username = username
         if password:
             # Hash the new password
-            user.password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+            user.password_hash = bcrypt.hashpw(
+                password.encode("utf-8"), bcrypt.gensalt()
+            )
         if role_id:
             user.role_id = role_id
         if email:
@@ -741,6 +748,21 @@ def get_all_events(user_id):
         return events
     except sqlite3.Error as e:
         logging.error(f"Database error in get_all_events: {e}")
+        return []
+
+
+def get_all_users():
+    """
+    Retrieves all users from the database.
+
+    Returns:
+        list of User: A list of User objects.
+    """
+    try:
+        users = User.get_all_users()
+        return users
+    except Exception as e:
+        logging.error(f"Error retrieving all users: {e}")
         return []
 
 

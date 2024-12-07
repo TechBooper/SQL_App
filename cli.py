@@ -9,6 +9,7 @@ to handle user interactions.
 """
 
 import sys
+import re
 import logging
 import getpass
 import os
@@ -34,6 +35,7 @@ from controllers import (
     filter_contracts_by_status,
     filter_events_unassigned,
     filter_events_by_support_user,
+    get_all_users,
 )
 from models import User
 from configs import sentry_setup
@@ -48,11 +50,9 @@ from views import (
     display_events,
     prompt_input,
     confirm_action,
+    display_users,
 )
 import sentry_sdk
-
-# Initialize Sentry
-sentry_setup()
 
 logging.basicConfig(
     filename="cli.log",
@@ -60,9 +60,10 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),))
-DATABASE_FOLDER = os.path.join(BASE_DIR, 'database')
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+DATABASE_FOLDER = os.path.join(BASE_DIR, "database")
 DATABASE_URL = os.path.join(DATABASE_FOLDER, "app.db")
+
 
 def main():
     """Main entry point for the CLI application.
@@ -71,7 +72,9 @@ def main():
     """
     # Check if the database exists
     if not os.path.exists(DATABASE_URL):
-        print("Database not found. Please initialize the database by running 'python database.py' before proceeding.")
+        print(
+            "Database not found. Please initialize the database by running 'python database.py' before proceeding."
+        )
         sys.exit(1)
 
     session = {}
@@ -103,22 +106,30 @@ def interactive_session(session):
         options = build_main_menu_options(session)
         display_main_menu(options)
         choice = prompt_choice()
-        if choice == '1':
-            handle_view_profile(session)
-        elif choice == '2':
-            handle_update_profile(session)
-        elif choice == '3' and options.get('3'):
-            manage_users(session)
-        elif choice == '4' and options.get('4'):
-            manage_clients(session)
-        elif choice == '5' and options.get('5'):
-            manage_contracts(session)
-        elif choice == '6' and options.get('6'):
-            manage_events(session)
-        elif choice == str(len(options)):
-            print("Logging out...")
-            break
+
+        # Check if the user choice is a valid option
+        if choice in options:
+            selection = options[choice]
+
+            if selection == "View Profile":
+                handle_view_profile(session)
+            elif selection == "Update Email":
+                handle_update_email(session)
+            elif selection == "Manage Users":
+                manage_users(session)
+            elif selection == "Manage Clients":
+                manage_clients(session)
+            elif selection == "Manage Contracts":
+                manage_contracts(session)
+            elif selection == "Manage Events":
+                manage_events(session)
+            elif selection == "Logout":
+                print("Logging out...")
+                break
+            else:
+                print("Invalid selection. Please try again.\n")
         else:
+            # The user typed something that's not in the options
             print("Invalid selection. Please try again.\n")
 
 
@@ -129,33 +140,46 @@ def build_main_menu_options(session):
         session (dict): User session data.
 
     Returns:
-        dict: A dictionary mapping menu option numbers to their descriptions.
+        dict: A dictionary mapping menu option numbers (as strings) to their descriptions.
     """
     options = {
-        '1': 'View Profile',
-        '2': 'Update Profile',
+        "1": "View Profile",
+        "2": "Update Email",  # Renamed from "Update Profile" to "Update Email"
     }
     option_number = 3
 
-    if has_any_user_management_permission(session):
-        options[str(option_number)] = 'Manage Users'
+    # Add 'Manage Users' if user has any user management permission or read permission for users
+    if has_permission(
+        session["role_id"], "user", "read"
+    ) or has_any_user_management_permission(session):
+        options[str(option_number)] = "Manage Users"
         option_number += 1
 
+    # Add 'Manage Clients' if user has read permission for clients
     if has_permission(session["role_id"], "client", "read"):
-        options[str(option_number)] = 'Manage Clients'
+        options[str(option_number)] = "Manage Clients"
         option_number += 1
 
+    # Add 'Manage Contracts' if user has read permission for contracts
     if has_permission(session["role_id"], "contract", "read"):
-        options[str(option_number)] = 'Manage Contracts'
+        options[str(option_number)] = "Manage Contracts"
         option_number += 1
 
+    # Add 'Manage Events' if user has read permission for events
     if has_permission(session["role_id"], "event", "read"):
-        options[str(option_number)] = 'Manage Events'
+        options[str(option_number)] = "Manage Events"
         option_number += 1
 
-    options[str(option_number)] = 'Logout'
+    # Finally, add the 'Logout' option
+    options[str(option_number)] = "Logout"
 
     return options
+
+
+def handle_view_users(session):
+    """Handles the viewing of all users."""
+    users = get_all_users()
+    display_users(users)
 
 
 def display_main_menu(options):
@@ -171,9 +195,9 @@ def display_main_menu(options):
 
 def has_any_user_management_permission(session):
     return (
-        has_permission(session["role_id"], "user", "create") or
-        has_permission(session["role_id"], "user", "update") or
-        has_permission(session["role_id"], "user", "delete")
+        has_permission(session["role_id"], "user", "create")
+        or has_permission(session["role_id"], "user", "update")
+        or has_permission(session["role_id"], "user", "delete")
     )
 
 
@@ -187,36 +211,56 @@ def handle_view_profile(session):
         print("Error fetching user profile.\n")
 
 
-def handle_update_profile(session):
-    # All users can update their own profile
-    print("\nUpdate Profile:")
-    new_email = prompt_input("Enter new email address: ")
-    user_id = session["user_id"]
-    user = User.get_by_id(user_id)
-    if user:
-        user.email = new_email
-        if user.update():
-            print("Profile updated successfully.\n")
+def handle_update_email(session):
+    """Handles updating the user's email."""
+    print("\nUpdate Email:")
+
+    # email regex pattern for validation purposes
+    email_pattern = r"^[^@]+@[^@]+\.[^@]+$"
+
+    while True:
+        new_email = prompt_input("Enter new email address: ")
+        if re.match(email_pattern, new_email):
+            user_id = session["user_id"]
+            user = User.get_by_id(user_id)
+            if user:
+                user.email = new_email
+                if user.update():
+                    print("Email updated successfully.\n")
+                else:
+                    print("Failed to update email.\n")
+            else:
+                print("User not found.\n")
+            break
         else:
-            print("Failed to update profile.\n")
-    else:
-        print("User not found.\n")
+            print(
+                "Invalid email format. Please enter a valid email (e.g., user@example.com)."
+            )
 
 
 def manage_users(session):
-    if has_any_user_management_permission(session):
+    if has_permission(
+        session["role_id"], "user", "read"
+    ) or has_any_user_management_permission(session):
         while True:
             options = build_manage_users_options(session)
             display_sub_menu("Manage Users", options)
             choice = prompt_choice()
-            if choice == '1' and options.get('1'):
-                handle_create_user(session)
-            elif choice == '2' and options.get('2'):
-                handle_update_user(session)
-            elif choice == '3' and options.get('3'):
-                handle_delete_user(session)
-            elif choice == str(len(options)):
-                break
+
+            if choice in options:
+                selection = options[choice]
+                if selection == "View Users":
+                    handle_view_users(session)
+                elif selection == "Create User":
+                    handle_create_user(session)
+                elif selection == "Update User":
+                    handle_update_user(session)
+                elif selection == "Delete User":
+                    handle_delete_user(session)
+                elif selection == "Back to Main Menu":
+                    break
+                else:
+                    print("Invalid selection. Please try again.\n")
             else:
                 print("Invalid selection. Please try again.\n")
     else:
@@ -227,19 +271,24 @@ def build_manage_users_options(session):
     options = {}
     option_number = 1
 
+    # If user can read users, show 'View Users' first
+    if has_permission(session["role_id"], "user", "read"):
+        options[str(option_number)] = "View Users"
+        option_number += 1
+
     if has_permission(session["role_id"], "user", "create"):
-        options[str(option_number)] = 'Create User'
+        options[str(option_number)] = "Create User"
         option_number += 1
 
     if has_permission(session["role_id"], "user", "update"):
-        options[str(option_number)] = 'Update User'
+        options[str(option_number)] = "Update User"
         option_number += 1
 
     if has_permission(session["role_id"], "user", "delete"):
-        options[str(option_number)] = 'Delete User'
+        options[str(option_number)] = "Delete User"
         option_number += 1
 
-    options[str(option_number)] = 'Back to Main Menu'
+    options[str(option_number)] = "Back to Main Menu"
 
     return options
 
@@ -259,7 +308,9 @@ def handle_create_user(session):
     if password != confirm_password:
         print("Passwords do not match.\n")
         return
-    role_id_input = prompt_input("Enter role ID (e.g., 1 for Management, 2 for Sales, 3 for Support): ")
+    role_id_input = prompt_input(
+        "Enter role ID (e.g., 1 for Management, 2 for Sales, 3 for Support): "
+    )
     try:
         role_id = int(role_id_input)
         result = create_user(
@@ -281,7 +332,9 @@ def handle_update_user(session):
         user_id = int(user_id_input)
         username = prompt_input("Enter new username: ")
         email = prompt_input("Enter new email: ")
-        role_id_input = prompt_input("Enter new role ID (e.g., 1 for Management, 2 for Sales, 3 for Support): ")
+        role_id_input = prompt_input(
+            "Enter new role ID (e.g., 1 for Management, 2 for Sales, 3 for Support): "
+        )
         role_id = int(role_id_input)
         result = update_user(
             admin_user_id=session["user_id"],
@@ -302,9 +355,7 @@ def handle_delete_user(session):
     if confirm:
         try:
             user_id = int(user_id_input)
-            result = delete_user(
-                admin_user_id=session["user_id"], user_id=user_id
-            )
+            result = delete_user(admin_user_id=session["user_id"], user_id=user_id)
             print(f"{result}\n")
         except ValueError:
             print("Invalid user ID.\n")
@@ -318,16 +369,22 @@ def manage_clients(session):
             options = build_manage_clients_options(session)
             display_sub_menu("Manage Clients", options)
             choice = prompt_choice()
-            if choice == '1':
-                handle_view_clients(session)
-            elif choice == '2' and options.get('2'):
-                handle_create_client(session)
-            elif choice == '3' and options.get('3'):
-                handle_update_client(session)
-            elif choice == '4' and options.get('4'):
-                handle_delete_client(session)
-            elif choice == str(len(options)):
-                break
+
+            if choice in options:
+                selection = options[choice]
+
+                if selection == "View Clients":
+                    handle_view_clients(session)
+                elif selection == "Create Client":
+                    handle_create_client(session)
+                elif selection == "Update Client":
+                    handle_update_client(session)
+                elif selection == "Delete Client":
+                    handle_delete_client(session)
+                elif selection == "Back to Main Menu":
+                    break
+                else:
+                    print("Invalid selection. Please try again.\n")
             else:
                 print("Invalid selection. Please try again.\n")
     else:
@@ -335,22 +392,22 @@ def manage_clients(session):
 
 
 def build_manage_clients_options(session):
-    options = {'1': 'View Clients'}
+    options = {"1": "View Clients"}
     option_number = 2
 
     if has_permission(session["role_id"], "client", "create"):
-        options[str(option_number)] = 'Create Client'
+        options[str(option_number)] = "Create Client"
         option_number += 1
 
     if has_permission(session["role_id"], "client", "update"):
-        options[str(option_number)] = 'Update Client'
+        options[str(option_number)] = "Update Client"
         option_number += 1
 
     if has_permission(session["role_id"], "client", "delete"):
-        options[str(option_number)] = 'Delete Client'
+        options[str(option_number)] = "Delete Client"
         option_number += 1
 
-    options[str(option_number)] = 'Back to Main Menu'
+    options[str(option_number)] = "Back to Main Menu"
 
     return options
 
@@ -409,9 +466,7 @@ def handle_delete_client(session):
     if confirm:
         try:
             client_id = int(client_id_input)
-            result = delete_client(
-                user_id=session["user_id"], client_id=client_id
-            )
+            result = delete_client(user_id=session["user_id"], client_id=client_id)
             print(f"{result}\n")
         except ValueError:
             print("Invalid client ID.\n")
@@ -425,18 +480,23 @@ def manage_contracts(session):
             options = build_manage_contracts_options(session)
             display_sub_menu("Manage Contracts", options)
             choice = prompt_choice()
-            if choice == '1':
-                handle_view_contracts(session)
-            elif choice == '2' and options.get('2'):
-                handle_create_contract(session)
-            elif choice == '3' and options.get('3'):
-                handle_update_contract(session)
-            elif choice == '4' and options.get('4'):
-                handle_delete_contract(session)
-            elif choice == '5':
-                handle_filter_contracts(session)
-            elif choice == str(len(options)):
-                break
+
+            if choice in options:
+                selection = options[choice]
+                if selection == "View Contracts":
+                    handle_view_contracts(session)
+                elif selection == "Create Contract":
+                    handle_create_contract(session)
+                elif selection == "Update Contract":
+                    handle_update_contract(session)
+                elif selection == "Delete Contract":
+                    handle_delete_contract(session)
+                elif selection == "Filter Contracts by Status":
+                    handle_filter_contracts(session)
+                elif selection == "Back to Main Menu":
+                    break
+                else:
+                    print("Invalid selection. Please try again.\n")
             else:
                 print("Invalid selection. Please try again.\n")
     else:
@@ -444,25 +504,25 @@ def manage_contracts(session):
 
 
 def build_manage_contracts_options(session):
-    options = {'1': 'View Contracts'}
+    options = {"1": "View Contracts"}
     option_number = 2
 
     if has_permission(session["role_id"], "contract", "create"):
-        options[str(option_number)] = 'Create Contract'
+        options[str(option_number)] = "Create Contract"
         option_number += 1
 
     if has_permission(session["role_id"], "contract", "update"):
-        options[str(option_number)] = 'Update Contract'
+        options[str(option_number)] = "Update Contract"
         option_number += 1
 
     if has_permission(session["role_id"], "contract", "delete"):
-        options[str(option_number)] = 'Delete Contract'
+        options[str(option_number)] = "Delete Contract"
         option_number += 1
 
-    options[str(option_number)] = 'Filter Contracts by Status'
+    options[str(option_number)] = "Filter Contracts by Status"
     option_number += 1
 
-    options[str(option_number)] = 'Back to Main Menu'
+    options[str(option_number)] = "Back to Main Menu"
 
     return options
 
@@ -484,10 +544,7 @@ def handle_create_contract(session):
     print("2. Not Signed")
     status_choice = prompt_input("Enter the number corresponding to the status: ")
 
-    status_mapping = {
-        '1': 'Signed',
-        '2': 'Not Signed'
-    }
+    status_mapping = {"1": "Signed", "2": "Not Signed"}
     status = status_mapping.get(status_choice)
 
     try:
@@ -522,10 +579,7 @@ def handle_update_contract(session):
     print("2. Not Signed")
     status_choice = prompt_input("Enter the number corresponding to the status: ")
 
-    status_mapping = {
-        '1': 'Signed',
-        '2': 'Not Signed'
-    }
+    status_mapping = {"1": "Signed", "2": "Not Signed"}
     status = status_mapping.get(status_choice)
 
     try:
@@ -572,10 +626,7 @@ def handle_filter_contracts(session):
     print("2. Not Signed")
     status_choice = prompt_input("Enter the number corresponding to the status: ")
 
-    status_mapping = {
-        '1': 'Signed',
-        '2': 'Not Signed'
-    }
+    status_mapping = {"1": "Signed", "2": "Not Signed"}
     status = status_mapping.get(status_choice)
 
     if status:
@@ -594,23 +645,27 @@ def manage_events(session):
             options = build_manage_events_options(session)
             display_sub_menu("Manage Events", options)
             choice = prompt_choice()
-            if choice == '1':
-                handle_view_events(session)
-            elif choice == '2' and options.get('2'):
-                handle_create_event(session)
-            elif choice == '3' and options.get('3'):
-                handle_update_event(session)
-            elif choice == '4' and options.get('4'):
-                handle_delete_event(session)
-            elif choice == '5' and options.get('5'):
-                handle_assign_support(session)
-            elif choice == '6':
-                if session["role"] == "Support":
+
+            if choice in options:
+                selection = options[choice]
+                if selection == "View Events":
+                    handle_view_events(session)
+                elif selection == "Create Event":
+                    handle_create_event(session)
+                elif selection == "Update Event":
+                    handle_update_event(session)
+                elif selection == "Delete Event":
+                    handle_delete_event(session)
+                elif selection == "Assign Support to Event":
+                    handle_assign_support(session)
+                elif selection == "View Events Assigned to Me":
                     handle_filter_events_assigned_to_me(session)
-                else:
+                elif selection == "Filter Unassigned Events":
                     handle_filter_events_unassigned(session)
-            elif choice == str(len(options)):
-                break
+                elif selection == "Back to Main Menu":
+                    break
+                else:
+                    print("Invalid selection. Please try again.\n")
             else:
                 print("Invalid selection. Please try again.\n")
     else:
@@ -618,32 +673,32 @@ def manage_events(session):
 
 
 def build_manage_events_options(session):
-    options = {'1': 'View Events'}
+    options = {"1": "View Events"}
     option_number = 2
 
     if has_permission(session["role_id"], "event", "create"):
-        options[str(option_number)] = 'Create Event'
+        options[str(option_number)] = "Create Event"
         option_number += 1
 
     if has_permission(session["role_id"], "event", "update"):
-        options[str(option_number)] = 'Update Event'
+        options[str(option_number)] = "Update Event"
         option_number += 1
 
     if has_permission(session["role_id"], "event", "delete"):
-        options[str(option_number)] = 'Delete Event'
+        options[str(option_number)] = "Delete Event"
         option_number += 1
 
     if has_permission(session["role_id"], "event", "update"):
-        options[str(option_number)] = 'Assign Support to Event'
+        options[str(option_number)] = "Assign Support to Event"
         option_number += 1
 
     if session["role"] == "Support":
-        options[str(option_number)] = 'View Events Assigned to Me'
+        options[str(option_number)] = "View Events Assigned to Me"
     elif has_permission(session["role_id"], "event", "read"):
-        options[str(option_number)] = 'Filter Unassigned Events'
+        options[str(option_number)] = "Filter Unassigned Events"
     option_number += 1
 
-    options[str(option_number)] = 'Back to Main Menu'
+    options[str(option_number)] = "Back to Main Menu"
 
     return options
 
@@ -653,7 +708,12 @@ def handle_view_events(session):
         events = filter_events_by_support_user(session["user_id"])
     else:
         events = get_all_events(session["user_id"])
-    display_events(events, title="Events Assigned to You" if session["role"] == "Support" else "Events List")
+    display_events(
+        events,
+        title=(
+            "Events Assigned to You" if session["role"] == "Support" else "Events List"
+        ),
+    )
 
 
 def handle_create_event(session):
@@ -713,9 +773,7 @@ def handle_delete_event(session):
     if confirm:
         try:
             event_id = int(event_id_input)
-            result = delete_event(
-                user_id=session["user_id"], event_id=event_id
-            )
+            result = delete_event(user_id=session["user_id"], event_id=event_id)
             print(f"{result}\n")
         except ValueError:
             print("Invalid event ID.\n")

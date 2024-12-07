@@ -4,8 +4,9 @@ from models import User, Role, Permission
 import os
 
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-DATABASE_URL = os.path.join(BASE_DIR, 'database', 'app.db')
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+DATABASE_FOLDER = os.path.join(BASE_DIR, "database")
+DATABASE_URL = os.path.join(DATABASE_FOLDER, "app.db")
 
 if not os.path.isabs(DATABASE_URL):
     DATABASE_URL = os.path.abspath(DATABASE_URL)
@@ -18,6 +19,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
+
 
 def authenticate(username, password):
     """
@@ -34,7 +36,9 @@ def authenticate(username, password):
                 logging.info("User %s authenticated successfully.", username)
                 return {"user_id": user.id, "role_id": user.role_id}
             else:
-                logging.warning("Failed authentication attempt for username: %s.", username)
+                logging.warning(
+                    "Failed authentication attempt for username: %s.", username
+                )
                 return None
         else:
             logging.warning("User %s not found.", username)
@@ -42,6 +46,7 @@ def authenticate(username, password):
     except Exception as error:
         logging.error("Error during authentication for %s: %s", username, str(error))
         return None
+
 
 def get_user_role(user_id):
     """
@@ -68,6 +73,7 @@ def get_user_role(user_id):
         logging.error("Error retrieving role for user ID %s: %s", user_id, str(error))
         return None
 
+
 def create_user(username, password, role_id, email):
     """
     Creates a new user with the given details.
@@ -82,9 +88,13 @@ def create_user(username, password, role_id, email):
         User: The created User object if successful, None otherwise.
     """
     try:
-        user = User.create(username=username, password=password, role_id=role_id, email=email)
+        user = User.create(
+            username=username, password=password, role_id=role_id, email=email
+        )
         if isinstance(user, User):
-            logging.info("User %s created successfully with role ID %d.", username, role_id)
+            logging.info(
+                "User %s created successfully with role ID %d.", username, role_id
+            )
             return user
         else:
             logging.error("Failed to create user %s: %s", username, user)
@@ -92,6 +102,7 @@ def create_user(username, password, role_id, email):
     except Exception as error:
         logging.error("Error while creating user %s: %s", username, str(error))
         return None
+
 
 def hash_password(password):
     """
@@ -105,6 +116,7 @@ def hash_password(password):
     """
     hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
     return hashed.decode("utf-8")
+
 
 def has_permission(role_id, entity, action):
     """

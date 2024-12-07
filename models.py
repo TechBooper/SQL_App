@@ -20,12 +20,10 @@ logging.basicConfig(
 )
 
 # Set DATABASE_URL to default path
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-DATABASE_URL = os.path.join(BASE_DIR, 'database', 'app.db')
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+DATABASE_FOLDER = os.path.join(BASE_DIR, "database")
+DATABASE_URL = os.path.join(DATABASE_FOLDER, "app.db")
 
-# Ensure DATABASE_URL is an absolute path
-if not os.path.isabs(DATABASE_URL):
-    DATABASE_URL = os.path.abspath(DATABASE_URL)
 
 class Database:
     """Database connection handler for the application."""
@@ -40,6 +38,7 @@ class Database:
         conn = sqlite3.connect(DATABASE_URL)
         conn.row_factory = sqlite3.Row
         return conn
+
 
 class User:
     """Represents a user in the application."""
@@ -75,7 +74,9 @@ class User:
         """
         try:
             # Hash the password using bcrypt and decode to string
-            password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+            password_hash = bcrypt.hashpw(
+                password.encode("utf-8"), bcrypt.gensalt()
+            ).decode("utf-8")
             with Database.connect() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
@@ -88,9 +89,9 @@ class User:
                 return User.get_by_id(user_id)
         except sqlite3.IntegrityError as e:
             logging.error(f"Integrity error in User.create: {e}")
-            if 'username' in str(e):
+            if "username" in str(e):
                 return "A user with this username already exists."
-            elif 'email' in str(e):
+            elif "email" in str(e):
                 return "A user with this email already exists."
             else:
                 return "An error occurred while creating the user."
@@ -110,6 +111,8 @@ class User:
         """
         try:
             conn = Database.connect()
+            print("DATABASE_URL:", DATABASE_URL)
+            print("Database file exists?", os.path.exists(DATABASE_URL))
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
             user_row = cursor.fetchone()
@@ -150,6 +153,29 @@ class User:
         finally:
             conn.close()
 
+    @staticmethod
+    def get_all_users():
+        """Retrieve all users from the database.
+
+        Returns:
+            list of User: A list of User objects.
+        """
+        try:
+            conn = Database.connect()
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM users")
+            rows = cursor.fetchall()
+            users = []
+            for row in rows:
+                user_data = dict(row)
+                users.append(User(**user_data))
+            return users
+        except sqlite3.Error as e:
+            logging.error(f"Database error in User.get_all_users: {e}")
+            return []
+        finally:
+            conn.close()
+
     def update(self, password=None):
         """Update the user's information in the database.
 
@@ -164,7 +190,9 @@ class User:
                 cursor = conn.cursor()
                 if password:
                     # Hash the new password and decode to string
-                    password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+                    password_hash = bcrypt.hashpw(
+                        password.encode("utf-8"), bcrypt.gensalt()
+                    ).decode("utf-8")
                 else:
                     password_hash = self.password_hash
 
@@ -183,9 +211,9 @@ class User:
                 return True
         except sqlite3.IntegrityError as e:
             logging.error(f"Integrity error in User.update: {e}")
-            if 'username' in str(e):
+            if "username" in str(e):
                 return "A user with this username already exists."
-            elif 'email' in str(e):
+            elif "email" in str(e):
                 return "A user with this email already exists."
             else:
                 return "An error occurred while updating the user."
@@ -221,12 +249,12 @@ class User:
         """
         try:
             return bcrypt.checkpw(
-                password.encode("utf-8"),
-                self.password_hash.encode("utf-8")
+                password.encode("utf-8"), self.password_hash.encode("utf-8")
             )
         except Exception as e:
             logging.error(f"Error verifying password for user {self.username}: {e}")
             return False
+
 
 class Role:
     """Represents a role assigned to a user."""
@@ -292,6 +320,7 @@ class Role:
             return None
         finally:
             conn.close()
+
 
 class Client:
     """Represents a client in the application."""
@@ -364,7 +393,7 @@ class Client:
                 return Client.get_by_id(client_id)
         except sqlite3.IntegrityError as e:
             logging.error(f"Integrity error in Client.create: {e}")
-            if 'email' in str(e):
+            if "email" in str(e):
                 return "A client with this email already exists."
             else:
                 return "A client with this first name, last name, and company already exists."
@@ -437,7 +466,7 @@ class Client:
                 return True
         except sqlite3.IntegrityError as e:
             logging.error(f"Integrity error in Client.update: {e}")
-            if 'email' in str(e):
+            if "email" in str(e):
                 return "A client with this email already exists."
             else:
                 return "Another client with this first name, last name, and company already exists."
@@ -461,6 +490,7 @@ class Client:
         except sqlite3.Error as e:
             logging.error(f"Database error in Client.delete: {e}")
             return False
+
 
 class Contract:
     """Represents a contract in the application."""
@@ -532,11 +562,11 @@ class Contract:
         except sqlite3.IntegrityError as e:
             error_message = str(e)
             logging.error(f"Integrity error in Contract.create: {e}")
-            if 'UNIQUE constraint failed' in error_message:
+            if "UNIQUE constraint failed" in error_message:
                 return "A contract with these details already exists for today."
-            elif 'CHECK constraint failed' in error_message:
+            elif "CHECK constraint failed" in error_message:
                 return "Invalid status value. Status must be 'Signed' or 'Not Signed'."
-            elif 'FOREIGN KEY constraint failed' in error_message:
+            elif "FOREIGN KEY constraint failed" in error_message:
                 return "Invalid client ID or sales contact ID."
             else:
                 return f"An integrity error occurred: {error_message}"
@@ -636,6 +666,7 @@ class Contract:
         except sqlite3.Error as e:
             logging.error(f"Database error in Contract.delete: {e}")
             return False
+
 
 class Event:
     """Represents an event in the application."""
@@ -818,6 +849,7 @@ class Event:
         except sqlite3.Error as e:
             logging.error(f"Database error in Event.delete: {e}")
             return False
+
 
 class Permission:
     """Represents a permission assigned to a role."""

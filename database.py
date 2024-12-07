@@ -1,9 +1,9 @@
 """
 Database initialization and user creation module for Epic Events CRM.
 
-This module handles the setup of the SQLite database, including table creation,
-inserting default roles and permissions, and creating the initial admin user.
-It also includes utility functions for password validation and user creation.
+This module sets up the SQLite database, including creating tables, inserting default roles
+and permissions, and creating the initial admin user account. It also provides functions for
+validating passwords and creating new users.
 """
 
 import bcrypt
@@ -12,11 +12,12 @@ import logging
 import os
 import getpass
 import sys
+import re
 
 # Use the current working directory as the base directory
 BASE_DIR = os.path.abspath(os.getcwd())
-DATABASE_FOLDER = os.path.join(BASE_DIR, 'database')
-DATABASE_URL = os.path.join(DATABASE_FOLDER, 'app.db')
+DATABASE_FOLDER = os.path.join(BASE_DIR, "database")
+DATABASE_URL = os.path.join(DATABASE_FOLDER, "app.db")
 
 if not os.path.exists(DATABASE_FOLDER):
     os.makedirs(DATABASE_FOLDER)  # Create the 'database' folder if it doesn't exist
@@ -31,8 +32,9 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",  # Log format
 )
 
+
 def is_password_strong(password):
-    """Check if the provided password meets strength requirements."""
+    """Check if the given password meets the strength requirements."""
     if len(password) < 8:
         return False
     if not any(char.isdigit() for char in password):
@@ -43,8 +45,9 @@ def is_password_strong(password):
         return False
     return True
 
+
 def create_database_connection():
-    """Create a database connection to the SQLite database."""
+    """Connect to the SQLite database and return the connection object."""
     try:
         conn = sqlite3.connect(DATABASE_URL)
         conn.row_factory = sqlite3.Row  # Enable access to columns by name
@@ -54,8 +57,9 @@ def create_database_connection():
         print(f"Database connection error: {e}")
         sys.exit(1)
 
+
 def create_tables(conn):
-    """Create the necessary tables and triggers in the database."""
+    """Create all the necessary tables, triggers, and constraints in the database."""
     try:
         cursor = conn.cursor()
 
@@ -157,7 +161,7 @@ def create_tables(conn):
         )
 
         # Create triggers to auto-update updated_at fields
-        tables_with_updated_at = ['users', 'clients', 'contracts', 'events']
+        tables_with_updated_at = ["users", "clients", "contracts", "events"]
         for table in tables_with_updated_at:
             cursor.execute(
                 f"""
@@ -182,11 +186,11 @@ def create_tables(conn):
             os.remove(DATABASE_URL)
         sys.exit(1)
 
+
 def create_role(conn, name):
-    """Create a new role in the database."""
+    """Insert a new role record into the roles table."""
     try:
         cursor = conn.cursor()
-        # Insert the new role into the database
         cursor.execute("INSERT INTO roles (name) VALUES (?)", (name,))
         conn.commit()
         logging.info(f"Role '{name}' created successfully.")
@@ -203,8 +207,9 @@ def create_role(conn, name):
             os.remove(DATABASE_URL)
         sys.exit(1)
 
+
 def insert_default_permissions(conn):
-    """Insert default permissions into the database."""
+    """Insert default permissions for each role into the permissions table."""
     try:
         cursor = conn.cursor()
 
@@ -293,22 +298,22 @@ def insert_default_permissions(conn):
             os.remove(DATABASE_URL)
         sys.exit(1)
 
+
 def get_role_id(conn, role_name):
-    """Retrieve the role ID for a given role name."""
+    """Fetch the role ID for a given role name."""
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM roles WHERE name = ?", (role_name,))
     role = cursor.fetchone()
     return role[0] if role else None
 
+
 def create_user(conn, username, password, role_id, email):
-    """Create a new user in the database."""
-    # Hash the password using bcrypt and decode it to a string for storage
+    """Create a new user record in the database with a hashed password."""
     password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
     password_hash_str = password_hash.decode("utf-8")
 
     try:
         cursor = conn.cursor()
-        # Insert the new user into the database
         cursor.execute(
             "INSERT INTO users (username, email, password_hash, role_id) VALUES (?, ?, ?, ?)",
             (username, email, password_hash_str, role_id),
@@ -337,16 +342,28 @@ def create_user(conn, username, password, role_id, email):
             os.remove(DATABASE_URL)
         sys.exit(1)
 
+
 def initialize_database():
-    """Initialize the SQLite database."""
+    """Initialize the database, set up roles, permissions, and create the admin user."""
     if os.path.exists(DATABASE_URL):
         print("Database already exists. Initialization skipped.")
         return
 
-    # Collect admin user details before creating the database
+    # Email regex pattern for validation
+    email_pattern = r"^[^@]+@[^@]+\.[^@]+$"
+
     print("Please enter admin user details to initialize the database.")
     admin_username = input("Enter admin username: ").strip()
-    admin_email = input("Enter admin email: ").strip()
+
+    # Validate admin email
+    while True:
+        admin_email = input("Enter admin email: ").strip()
+        if re.match(email_pattern, admin_email):
+            break
+        else:
+            print(
+                "Invalid email format. Please enter a valid email (e.g., user@example.com)."
+            )
 
     # Password input and validation
     while True:
@@ -356,28 +373,23 @@ def initialize_database():
             print("Passwords do not match. Please try again.")
             continue
         if not is_password_strong(admin_password):
-            print("Password is not strong enough. It must be at least 8 characters long and include uppercase letters, lowercase letters, and numbers.")
+            print(
+                "Password is not strong enough. It must be at least 8 characters long and include uppercase letters, lowercase letters, and numbers."
+            )
             continue
         break
 
-    # Proceed to create the database and insert data
+    # Create the database, roles, permissions, and admin user
     conn = create_database_connection()
     try:
-        # Create tables and triggers
         create_tables(conn)
-
-        # Create default roles
-        create_role(conn, 'Management')
-        create_role(conn, 'Commercial')
-        create_role(conn, 'Support')
-
-        # Insert default permissions
+        create_role(conn, "Management")
+        create_role(conn, "Commercial")
+        create_role(conn, "Support")
         insert_default_permissions(conn)
 
-        # Get role_id for 'Management'
-        role_id = get_role_id(conn, 'Management')
+        role_id = get_role_id(conn, "Management")
         if role_id:
-            # Create admin user
             create_user(conn, admin_username, admin_password, role_id, admin_email)
             print(f"Admin user '{admin_username}' created.")
             logging.info(f"Admin user '{admin_username}' created successfully.")
@@ -397,6 +409,7 @@ def initialize_database():
         if os.path.exists(DATABASE_URL):
             os.remove(DATABASE_URL)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     initialize_database()

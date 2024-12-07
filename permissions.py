@@ -7,6 +7,7 @@ read, update, or delete on clients, contracts, and events.
 
 from models import User, Permission
 
+
 def has_permission(user_id, entity, action, resource_owner_id=None):
     """Check if a user has permission to perform a specific action on an entity.
 

@@ -1,3 +1,41 @@
+/*
+This database schema sets up the foundation for an Epic Events CRM system. It organizes
+different parts of the business data—like roles, users, clients, contracts, events, and
+permissions—into tables. Each table stores related information, and the connections between
+them ensure that the data stays consistent.
+
+Here's what each part does:
+
+- Roles: Defines user roles (like Management, Commercial, Support). Roles determine what each
+  user can do in the system.
+
+- Users: Holds information about each person who can log in, including their username, password,
+  email, and which role they belong to. Each user can have a profile for extra details like a bio.
+
+- Clients: Represents the customers. Each client has contact details and can be managed by a
+  particular user (like a salesperson). The database prevents adding the same client multiple times.
+
+- Contracts: Tracks agreements between the company and clients. Contracts link to a client and
+  may involve a salesperson. They include information about total amounts, remaining amounts, and
+  whether they're signed or not. Only valid numbers and statuses are allowed.
+
+- Events: Shows scheduled events connected to a contract. An event might have a support person
+  assigned. The database makes sure you can't add the exact same event details (same date, location, etc.) twice.
+
+- Permissions: Controls who can do what. Each role gets certain actions (like read, create, update, 
+  or delete) on certain entities (like clients or events). This way, managers might have more power 
+  than support staff, and so on.
+
+Other details:
+- If something is deleted, related data often updates or gets cleared so there's no messy leftover info.
+- Triggers automatically update timestamps whenever something changes.
+- Indexes speed up searches and connections between tables.
+
+Overall, this design helps keep everything organized, secure, and consistent, making it easier
+for the Epic Events CRM to run smoothly.
+*/
+
+
 -- Roles Table
 CREATE TABLE roles (
     id INTEGER PRIMARY KEY,
