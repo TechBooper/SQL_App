@@ -18,17 +18,18 @@ This is a Command-Line Interface (CLI) application for managing customer relatio
 
 1. Clone the Repository
 
-`git clone https://github.com/yourusername/epic-events-cli.git`
+`git clone https://github.com/epic-events/epic-events-cli.git`
 
-2. Create a Virtual Environment
+2. Set up virtual env
 
 `python -m venv venv`
+`source venv/bin/activate`  # Windows: venv\Scripts\activate
 
-3. Install Dependencies
+2. Install Dependencies
 
 `pip install -r requirements.txt`
 
-4. Initialize the Database
+3. Initialize the Database
 
 Run the database.py script to create and initialize the SQLite database by inputting:
 
@@ -38,65 +39,57 @@ Run the database.py script to create and initialize the SQLite database by input
 
 Run the CLI application using:
 
-python cli.py login <username>
+`python cli.py`
 
-Here's a compilation of the commands:
+# Available Actions
 
-#Commands
+Profile Management:
 
-Once logged in, you can use the following commands:
+View Profile: View your user profile information.
+Update Profile: Update your email address.
 
-User Commands:
+User Management (Management Role Only)
 
-view_profile: View your user profile.
+Create User: Add a new user to the system.
+Update User: Modify an existing user's information.
+Delete User: Remove a user from the system.
 
-update_profile <email>: Update your email address.
+Client Management
 
-create_user <username> <role_id> <email>: Create a new user (Management only).
+View Clients: Display a list of all clients.
+Create Client: Add a new client.
+Update Client: Modify an existing client's information.
+Delete Client: Remove a client from the system (Management role only).
 
-update_user <user_id> <username> <email> <role_id>: Update a user's information (Management only).
+Contract Management
 
-delete_user <user_id>: Delete a user (Management only).
+View Contracts: Display a list of all contracts.
+Create Contract: Add a new contract.
+Update Contract: Modify an existing contract.
+Delete Contract: Remove a contract from the system (Management role only).
+Filter Contracts by Status: View contracts filtered by 'Signed' or 'Not Signed' status.
 
-Client Commands:
+Event Management
 
-create_client <first_name> <last_name> <email> <phone> <company_name>: Create a new client.
+View Events: Display a list of all events.
+Create Event: Schedule a new event.
+Update Event: Modify an existing event.
+Delete Event: Remove an event from the system (Management role only).
+Assign Support to Event: Assign a support user to an event (Management role only).
+Filter Unassigned Events: View events without assigned support (Non-support roles).
+View Events Assigned to Me: Support users can view events assigned to them.
 
-update_client <client_id> <first_name> <last_name> <email> <phone> <company_name>: Update client information.
+Notes
 
-delete_client <client_id>: Delete a client (Management only).
+Permissions: The options available to you in the menus depend on your user role and permissions.
+Validation: The application validates your inputs and provides feedback if there's an error.
+Logging: Operations are logged for auditing purposes.
 
-view_clients: View all clients.
+Troubleshooting
 
-Contract Commands:
+Database Not Found: If you receive a "Database not found" error, ensure you've initialized the database by running python database.py.
+Permission Denied: If you attempt to access a feature you don't have permissions for, the application will notify you.
 
-create_contract <client_id> <total_amount> <amount_remaining> <status>: Create a new contract.
+Logging Out
 
-update_contract <contract_id> <total_amount> <amount_remaining> <status>: Update a contract.
-
-delete_contract <contract_id>: Delete a contract (Management only).
-
-view_contracts: View all contracts.
-
-filter_contracts <status>: View contracts filtered by status.
-
-Event Commands:
-
-create_event <contract_id> <event_date_start> <event_date_end> <location> <attendees> <notes>: Create a new event.
-
-update_event <event_id> <event_date_start> <event_date_end> <location> <attendees> <notes>: Update an event.
-
-delete_event <event_id>: Delete an event (Management only).
-
-assign_support <event_id> <support_user_id>: Assign a support user to an event (Management only).
-
-view_events: View all events.
-
-filter_events_unassigned: View events without assigned support.
-
-filter_events_assigned_to_me: View events assigned to you (Support role).
-
-Additional Commands:
-
-help: Display available commands.
-logout: Log out of the application.
+To log out of the application, select the 'Logout' option from the main menu.
