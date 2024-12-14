@@ -1,15 +1,5 @@
-# views.py
-
-"""
-Views module for Epic Events CRM.
-
-This module handles all user interface elements, including displaying menus,
-capturing user input, and presenting data in a formatted manner.
-"""
-
 import getpass
 from tabulate import tabulate
-
 
 def display_welcome_message():
     """Displays the welcome message to the user."""
@@ -54,6 +44,7 @@ def display_profile(user):
     Args:
         user (User): The user object containing profile information.
     """
+    # With the new schema, 'user' has: username, email, role_id
     print(f"\nUser Profile:")
     print(f"  Username: {user.username}")
     print(f"  Email: {user.email}")
@@ -113,12 +104,10 @@ def display_users(users, title="Users List"):
     if not users:
         print("No users found.\n")
         return
-
-    # Assuming User objects have attributes: id, username, email, and role_id
-    headers = ["ID", "Username", "Email", "Role ID"]
+    headers = ["Username", "Email", "Role"]
     table = []
     for user in users:
-        table.append([user.id, user.username, user.email, user.role_id])
+        table.append([user.username, user.email, user.role_id])
 
     print(tabulate(table, headers=headers, tablefmt="grid"))
     print("")
@@ -133,15 +122,16 @@ def display_clients(clients):
     if not clients:
         print("No clients found.\n")
         return
+    # New schema for clients:
+    # email (PK), first_name, last_name, phone, company_name, last_contact, sales_contact_id, created_at, updated_at
     headers = [
-        "ID",
+        "Email",
         "First Name",
         "Last Name",
-        "Email",
         "Phone",
         "Company Name",
         "Last Contact",
-        "Sales Contact ID",
+        "Sales Contact Username",
         "Created At",
         "Updated At",
     ]
@@ -149,10 +139,9 @@ def display_clients(clients):
     for client in clients:
         table.append(
             [
-                client["id"],
+                client["email"],
                 client["first_name"],
                 client["last_name"],
-                client["email"],
                 client["phone"],
                 client["company_name"],
                 client["last_contact"],
@@ -178,8 +167,8 @@ def display_contracts(contracts, title="Contracts List"):
         return
     headers = [
         "ID",
-        "Client ID",
-        "Sales Contact ID",
+        "Client Email",
+        "Sales Contact Username",
         "Total Amount",
         "Amount Remaining",
         "Status",
@@ -218,9 +207,9 @@ def display_events(events, title="Events List"):
     headers = [
         "ID",
         "Contract ID",
-        "Support Contact ID",
-        "Start Date",
-        "End Date",
+        "Support Contact Username",
+        "Start Date/Time",
+        "End Date/Time",
         "Location",
         "Attendees",
         "Notes",

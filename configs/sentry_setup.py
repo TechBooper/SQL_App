@@ -1,3 +1,10 @@
+"""Sentry initialization module for Epic Events CRM.
+
+This module sets up Sentry for error monitoring and performance tracking.
+It configures environment variables, initializes Sentry with a custom transport,
+and handles exceptions during the initialization process.
+"""
+
 import os
 import sentry_sdk
 from sentry_sdk.transport import HttpTransport
@@ -9,9 +16,15 @@ load_dotenv()
 print(f"SENTRY_DSN: {os.getenv('SENTRY_DSN')}")
 
 
-# Custom transport to set timeout by using the built-in timeout option
 class CustomHttpTransport(HttpTransport):
+    """Custom HTTP transport for Sentry with an adjusted timeout."""
+
     def __init__(self, options):
+        """Initialize the custom HTTP transport with a specific timeout.
+
+        Args:
+            options (dict): Transport options.
+        """
         super().__init__(options)
         # Set the timeout through options that HttpTransport expects
         self.options["timeout"] = 5  # Default timeout of 5 seconds

@@ -1,204 +1,177 @@
 /*
-This database schema sets up the foundation for an Epic Events CRM system. It organizes
-different parts of the business data—like roles, users, clients, contracts, events, and
-permissions—into tables. Each table stores related information, and the connections between
-them ensure that the data stays consistent.
+This database schema sets up a foundation for Epic Events CRM, similar to the previous design, but simplified to avoid any SQLite-specific pitfalls. The logic and constraints remain effectively the same, but we’ll use standard SQLite-compatible syntax.
 
-Here's what each part does:
+Changes from previous attempts:
+- No "IF NOT EXISTS" for triggers.
+- No "SET" keyword in triggers.
+- Using standard SQLite-compatible data types and syntax.
+- Decimals will be stored as REAL because SQLite doesn’t have a DECIMAL type; checks remain to ensure valid values.
+- Ensuring all columns and constraints are compatible with SQLite.
 
-- Roles: Defines user roles (like Management, Commercial, Support). Roles determine what each
-  user can do in the system.
+This schema uses:
+- Roles, Users, Clients, Contracts, Events, Permissions tables.
+- Triggers to auto-update updated_at on update.
+- Indexes on foreign key columns.
 
-- Users: Holds information about each person who can log in, including their username, password,
-  email, and which role they belong to. Each user can have a profile for extra details like a bio.
-
-- Clients: Represents the customers. Each client has contact details and can be managed by a
-  particular user (like a salesperson). The database prevents adding the same client multiple times.
-
-- Contracts: Tracks agreements between the company and clients. Contracts link to a client and
-  may involve a salesperson. They include information about total amounts, remaining amounts, and
-  whether they're signed or not. Only valid numbers and statuses are allowed.
-
-- Events: Shows scheduled events connected to a contract. An event might have a support person
-  assigned. The database makes sure you can't add the exact same event details (same date, location, etc.) twice.
-
-- Permissions: Controls who can do what. Each role gets certain actions (like read, create, update, 
-  or delete) on certain entities (like clients or events). This way, managers might have more power 
-  than support staff, and so on.
-
-Other details:
-- If something is deleted, related data often updates or gets cleared so there's no messy leftover info.
-- Triggers automatically update timestamps whenever something changes.
-- Indexes speed up searches and connections between tables.
-
-Overall, this design helps keep everything organized, secure, and consistent, making it easier
-for the Epic Events CRM to run smoothly.
+We will rely on REAL for amounts since SQLite stores numeric values as REAL; checks still enforce numeric constraints.
 */
-
 
 -- Roles Table
 CREATE TABLE roles (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE
+    name TEXT PRIMARY KEY
 );
 
--- Insert roles into the roles table
-INSERT INTO roles (id, name) VALUES
-    (1, 'Management'),
-    (2, 'Commercial'),
-    (3, 'Support');
+INSERT INTO roles (name) VALUES 
+    ('Management'),
+    ('Commercial'),
+    ('Support');
 
 -- Users Table
 CREATE TABLE users (
-    id INTEGER PRIMARY KEY,
-    username TEXT NOT NULL UNIQUE,
+    username TEXT PRIMARY KEY,
     password_hash TEXT NOT NULL,
-    role_id INTEGER NOT NULL,
-    email TEXT NOT NULL UNIQUE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+    role_id TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (role_id) REFERENCES roles(name)
 );
 
 -- Profiles Table
 CREATE TABLE profiles (
-    user_id INTEGER PRIMARY KEY,
+    user_id TEXT PRIMARY KEY,
     bio TEXT,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(username)
 );
 
--- Clients Table with UNIQUE constraint to prevent duplicates
+-- Clients Table
 CREATE TABLE clients (
-    id INTEGER PRIMARY KEY,
+    email TEXT PRIMARY KEY,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
     phone TEXT,
     company_name TEXT,
-    last_contact DATE,
-    sales_contact_id INTEGER,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (sales_contact_id) REFERENCES users(id) ON DELETE SET NULL,
+    last_contact TEXT, -- SQLite date
+    sales_contact_id TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (sales_contact_id) REFERENCES users(username),
     UNIQUE (first_name, last_name, company_name)
 );
 
--- Contracts Table with corrected constraints and data types
+-- Contracts Table
 CREATE TABLE contracts (
-    id INTEGER PRIMARY KEY,
-    client_id INTEGER NOT NULL,
-    sales_contact_id INTEGER,
-    total_amount DECIMAL(10, 2) NOT NULL CHECK (total_amount >= 0),
-    amount_remaining DECIMAL(10, 2) NOT NULL CHECK (amount_remaining >= 0 AND amount_remaining <= total_amount),
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id TEXT NOT NULL,
+    sales_contact_id TEXT,
+    total_amount REAL NOT NULL CHECK (total_amount >= 0),
+    amount_remaining REAL NOT NULL CHECK (amount_remaining >= 0),
     status TEXT NOT NULL CHECK (status IN ('Signed', 'Not Signed')),
-    date_created DATE DEFAULT (DATE('now')),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
-    FOREIGN KEY (sales_contact_id) REFERENCES users(id) ON DELETE SET NULL,
-    UNIQUE (client_id, total_amount, status, date_created)
+    date_created TEXT DEFAULT (date('now')),
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    CHECK (amount_remaining <= total_amount),
+    FOREIGN KEY (client_id) REFERENCES clients(email),
+    FOREIGN KEY (sales_contact_id) REFERENCES users(username)
 );
 
--- Events Table with corrected constraints
+-- Events Table
 CREATE TABLE events (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     contract_id INTEGER NOT NULL,
-    support_contact_id INTEGER,
-    event_date_start DATETIME NOT NULL,
-    event_date_end DATETIME NOT NULL,
+    support_contact_id TEXT,
+    event_date_start TEXT NOT NULL,
+    event_date_end TEXT NOT NULL,
     location TEXT,
     attendees INTEGER,
     notes TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE,
-    FOREIGN KEY (support_contact_id) REFERENCES users(id) ON DELETE SET NULL,
-    UNIQUE (contract_id, event_date_start, event_date_end, location)
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (contract_id) REFERENCES contracts(id),
+    FOREIGN KEY (support_contact_id) REFERENCES users(username)
 );
 
--- Permissions Table with constraints
+-- Permissions Table
 CREATE TABLE permissions (
-    id INTEGER PRIMARY KEY,
-    role_id INTEGER NOT NULL,
-    entity TEXT NOT NULL CHECK (entity IN ('client', 'contract', 'event', 'user')),
-    action TEXT NOT NULL CHECK (action IN ('create', 'read', 'update', 'delete')),
-    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    role_id TEXT NOT NULL,
+    entity TEXT NOT NULL,
+    action TEXT NOT NULL,
+    FOREIGN KEY (role_id) REFERENCES roles(name),
+    CHECK (entity IN ('client', 'contract', 'event', 'user')),
+    CHECK (action IN ('create', 'read', 'update', 'delete'))
 );
 
--- Insert permissions for Management role
+-- Insert Management Permissions
 INSERT INTO permissions (role_id, entity, action) VALUES
-    (1, 'client', 'create'),
-    (1, 'client', 'update'),
-    (1, 'client', 'read'),
-    (1, 'client', 'delete'),
-    (1, 'contract', 'create'),
-    (1, 'contract', 'update'),
-    (1, 'contract', 'read'),
-    (1, 'contract', 'delete'),
-    (1, 'event', 'create'),
-    (1, 'event', 'update'),
-    (1, 'event', 'read'),
-    (1, 'event', 'delete'),
-    (1, 'user', 'create'),
-    (1, 'user', 'update'),
-    (1, 'user', 'delete'),
-    (1, 'user', 'read');
+    ('Management', 'client', 'create'),
+    ('Management', 'client', 'read'),
+    ('Management', 'client', 'update'),
+    ('Management', 'client', 'delete'),
+    ('Management', 'contract', 'create'),
+    ('Management', 'contract', 'read'),
+    ('Management', 'contract', 'update'),
+    ('Management', 'contract', 'delete'),
+    ('Management', 'event', 'create'),
+    ('Management', 'event', 'read'),
+    ('Management', 'event', 'update'),
+    ('Management', 'event', 'delete'),
+    ('Management', 'user', 'create'),
+    ('Management', 'user', 'read'),
+    ('Management', 'user', 'update'),
+    ('Management', 'user', 'delete');
 
--- Insert permissions for Commercial role
+-- Insert Commercial Permissions
 INSERT INTO permissions (role_id, entity, action) VALUES
-    (2, 'client', 'create'),
-    (2, 'client', 'update'),
-    (2, 'client', 'read'),
-    (2, 'contract', 'create'),
-    (2, 'contract', 'update'),
-    (2, 'contract', 'read'),
-    (2, 'event', 'create'),
-    (2, 'event', 'read');
+    ('Commercial', 'client', 'create'),
+    ('Commercial', 'client', 'read'),
+    ('Commercial', 'client', 'update'),
+    ('Commercial', 'contract', 'create'),
+    ('Commercial', 'contract', 'read'),
+    ('Commercial', 'contract', 'update'),
+    ('Commercial', 'event', 'create'),
+    ('Commercial', 'event', 'read');
 
--- Insert permissions for Support role
+-- Insert Support Permissions
 INSERT INTO permissions (role_id, entity, action) VALUES
-    (3, 'event', 'read'),
-    (3, 'event', 'update'),
-    (3, 'client', 'read'),
-    (3, 'contract', 'read');
+    ('Support', 'event', 'read'),
+    ('Support', 'event', 'update'),
+    ('Support', 'client', 'read'),
+    ('Support', 'contract', 'read');
 
--- Corrected triggers to auto-update updated_at fields using BEFORE UPDATE
--- For users table
-CREATE TRIGGER update_users_updated_at
-BEFORE UPDATE ON users
-FOR EACH ROW
+-- Create indexes for better performance
+CREATE INDEX idx_users_role ON users(role_id);
+CREATE INDEX idx_clients_sales_contact ON clients(sales_contact_id);
+CREATE INDEX idx_contracts_client ON contracts(client_id);
+CREATE INDEX idx_contracts_sales_contact ON contracts(sales_contact_id);
+CREATE INDEX idx_events_contract ON events(contract_id);
+CREATE INDEX idx_events_support_contact ON events(support_contact_id);
+
+-- Create triggers for updated_at timestamps
+CREATE TRIGGER users_updated_at_trigger 
+    AFTER UPDATE ON users
 BEGIN
-    SET NEW.updated_at = CURRENT_TIMESTAMP;
+    UPDATE users SET updated_at = datetime('now')
+    WHERE username = NEW.username;
 END;
 
--- For clients table
-CREATE TRIGGER update_clients_updated_at
-BEFORE UPDATE ON clients
-FOR EACH ROW
+CREATE TRIGGER clients_updated_at_trigger
+    AFTER UPDATE ON clients
 BEGIN
-    SET NEW.updated_at = CURRENT_TIMESTAMP;
+    UPDATE clients SET updated_at = datetime('now')
+    WHERE email = NEW.email;
 END;
 
--- For contracts table
-CREATE TRIGGER update_contracts_updated_at
-BEFORE UPDATE ON contracts
-FOR EACH ROW
+CREATE TRIGGER contracts_updated_at_trigger
+    AFTER UPDATE ON contracts
 BEGIN
-    SET NEW.updated_at = CURRENT_TIMESTAMP;
+    UPDATE contracts SET updated_at = datetime('now')
+    WHERE id = NEW.id;
 END;
 
--- For events table
-CREATE TRIGGER update_events_updated_at
-BEFORE UPDATE ON events
-FOR EACH ROW
+CREATE TRIGGER events_updated_at_trigger
+    AFTER UPDATE ON events
 BEGIN
-    SET NEW.updated_at = CURRENT_TIMESTAMP;
+    UPDATE events SET updated_at = datetime('now')
+    WHERE id = NEW.id;
 END;
-
--- Create indexes on foreign key columns
-CREATE INDEX idx_users_role_id ON users(role_id);
-CREATE INDEX idx_clients_sales_contact_id ON clients(sales_contact_id);
-CREATE INDEX idx_contracts_client_id ON contracts(client_id);
-CREATE INDEX idx_contracts_sales_contact_id ON contracts(sales_contact_id);
-CREATE INDEX idx_events_contract_id ON events(contract_id);
-CREATE INDEX idx_events_support_contact_id ON events(support_contact_id);

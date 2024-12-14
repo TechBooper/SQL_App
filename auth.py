@@ -1,8 +1,7 @@
 import bcrypt
 import logging
-from models import User, Role, Permission
 import os
-
+from models import User, Role, Permission
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DATABASE_FOLDER = os.path.join(BASE_DIR, "database")
@@ -13,9 +12,8 @@ if not os.path.isabs(DATABASE_URL):
 
 print(f"DATABASE_URL: {DATABASE_URL}")
 
-# Configure logging settings
 logging.basicConfig(
-    filename="auth.log",  # Logs will be saved to auth.log file
+    filename="auth.log",
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
@@ -26,19 +24,17 @@ def authenticate(username, password):
     Authenticates a user by username and password.
 
     Returns:
-        dict: A dictionary with user ID and role ID if authenticated, None otherwise.
+        dict: A dictionary with username and role name if authenticated, None otherwise.
     """
-
     try:
         user = User.get_by_username(username)
         if user:
             if user.verify_password(password):
                 logging.info("User %s authenticated successfully.", username)
-                return {"user_id": user.id, "role_id": user.role_id}
+                # user.role_id is actually the role name now
+                return {"username": user.username, "role_id": user.role_id}
             else:
-                logging.warning(
-                    "Failed authentication attempt for username: %s.", username
-                )
+                logging.warning("Failed authentication attempt for username: %s.", username)
                 return None
         else:
             logging.warning("User %s not found.", username)
@@ -48,29 +44,30 @@ def authenticate(username, password):
         return None
 
 
-def get_user_role(user_id):
+def get_user_role(username):
     """
-    Retrieves the role of a user by user ID.
+    Retrieves the role of a user by username.
 
     Args:
-        user_id (int): The ID of the user.
+        username (str): The username of the user.
 
     Returns:
         str: The name of the role if found, None otherwise.
     """
     try:
-        user = User.get_by_id(user_id)
+        user = User.get_by_username(username)
         if user:
-            role = Role.get_by_id(user.role_id)
-            if role:
-                logging.info("Role %s retrieved for user ID %s.", role.name, user_id)
-                return role.name
-            logging.warning("No role found for user ID %s.", user_id)
+            # role_id is actually the role's name
+            role_name = user.role_id
+            if role_name:
+                logging.info("Role %s retrieved for user %s.", role_name, username)
+                return role_name
+            logging.warning("No role found for user %s.", username)
             return None
-        logging.warning("User with ID %s not found.", user_id)
+        logging.warning("User %s not found.", username)
         return None
     except Exception as error:
-        logging.error("Error retrieving role for user ID %s: %s", user_id, str(error))
+        logging.error("Error retrieving role for user %s: %s", username, str(error))
         return None
 
 
@@ -81,7 +78,7 @@ def create_user(username, password, role_id, email):
     Args:
         username (str): The username for the new user.
         password (str): The plain-text password for the new user.
-        role_id (int): The role ID for the new user.
+        role_id (str): The role name for the new user (e.g., 'Management').
         email (str): The email address for the new user.
 
     Returns:
@@ -93,7 +90,7 @@ def create_user(username, password, role_id, email):
         )
         if isinstance(user, User):
             logging.info(
-                "User %s created successfully with role ID %d.", username, role_id
+                "User %s created successfully with role %s.", username, role_id
             )
             return user
         else:
@@ -118,12 +115,12 @@ def hash_password(password):
     return hashed.decode("utf-8")
 
 
-def has_permission(role_id, entity, action):
+def has_permission(role_name, entity, action):
     """
     Checks if a role has a specific permission.
 
     Args:
-        role_id (int): The ID of the role.
+        role_name (str): The name of the role.
         entity (str): The entity to check permission for.
         action (str): The action to check permission for.
 
@@ -131,7 +128,8 @@ def has_permission(role_id, entity, action):
         bool: True if the permission exists, False otherwise.
     """
     try:
-        return Permission.has_permission(role_id, entity, action)
+        # role_name is the role identifier now
+        return Permission.has_permission(role_name, entity, action)
     except Exception as e:
-        logging.error(f"Error checking permission for role ID {role_id}: {e}")
+        logging.error(f"Error checking permission for role {role_name}: {e}")
         return False

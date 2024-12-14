@@ -1,9 +1,3 @@
-"""Controllers module for Epic Events CRM.
-
-This module handles business logic and CRUD operations for clients, contracts, events, and users.
-It includes permission checks and interactions with the models.
-"""
-
 import logging
 from models import User, Client, Contract, Event, Permission, Role, Database
 import sqlite3
@@ -16,27 +10,27 @@ logging.basicConfig(
 )
 
 
-def has_permission(user_id, entity, action, resource_owner_id=None):
-    """Check if a user has permission to perform a certain action on an entity.
+def has_permission(username, entity, action, resource_owner_username=None):
+    """Check if a user (identified by username) has permission to perform a certain action on an entity.
 
     Args:
-        user_id (int): The ID of the user performing the action.
+        username (str): The username of the user performing the action.
         entity (str): The entity type (e.g., 'client', 'contract', 'event').
         action (str): The action to perform (e.g., 'create', 'update', 'delete').
-        resource_owner_id (int, optional): The ID of the resource owner, if applicable.
+        resource_owner_username (str, optional): The username of the resource owner, if applicable.
 
     Returns:
         bool: True if the user has permission, False otherwise.
     """
-    user = User.get_by_id(user_id)
+    user = User.get_by_username(username)
     if not user:
-        logging.warning(f"User with ID {user_id} not found.")
+        logging.warning(f"User '{username}' not found.")
         return False
 
-    # Get the role name
-    role = Role.get_by_id(user.role_id)
+    # user.role_id is actually the role's name now
+    role = Role.get_by_name(user.role_id)
     if not role:
-        logging.error(f"Role with ID {user.role_id} not found for user ID {user_id}.")
+        logging.error(f"Role '{user.role_id}' not found for user '{username}'.")
         return False
 
     # Check if the user has the permission for the action
@@ -47,7 +41,7 @@ def has_permission(user_id, entity, action, resource_owner_id=None):
 
     if not has_perm:
         logging.warning(
-            f"Permission denied for user ID {user_id} to {action} {entity}."
+            f"Permission denied for user '{username}' to {action} {entity}."
         )
         return False
 
@@ -55,35 +49,20 @@ def has_permission(user_id, entity, action, resource_owner_id=None):
     if action in ["update", "delete"] and entity in ["client", "contract", "event"]:
         if role.name == "Management":
             return True  # Management can modify any resource
-        if resource_owner_id is not None:
-            return user_id == resource_owner_id  # Only owner can modify
-        return False  # No ownership ID provided
+        if resource_owner_username is not None:
+            return username == resource_owner_username  # Only owner can modify
+        return False  # No ownership provided
 
     # Commercial users can only create events for their own clients
     if action == "create" and entity == "event" and role.name == "Commercial":
-        return resource_owner_id == user_id
+        return resource_owner_username == username
 
-    return True  # No additional ownership check needed
-
-
-# CRUD operations
+    return True
 
 
-def create_client(user_id, first_name, last_name, email, phone, company_name):
-    """Create a new client.
-
-    Args:
-        user_id (int): The ID of the user creating the client.
-        first_name (str): Client's first name.
-        last_name (str): Client's last name.
-        email (str): Client's email address.
-        phone (str): Client's phone number.
-        company_name (str): Client's company name.
-
-    Returns:
-        str: Success message or error message.
-    """
-    if not has_permission(user_id, "client", "create"):
+def create_client(username, first_name, last_name, email, phone, company_name):
+    """Create a new client."""
+    if not has_permission(username, "client", "create"):
         return "Permission denied."
 
     if not all([first_name, last_name, email, phone, company_name]):
@@ -95,558 +74,365 @@ def create_client(user_id, first_name, last_name, email, phone, company_name):
         email=email,
         phone=phone,
         company_name=company_name,
-        sales_contact_id=user_id,
+        sales_contact_id=username,
     )
 
     if isinstance(result, str):
-        # An error message was returned from the model
         return result
     elif result:
-        logging.info(f"Client {first_name} {last_name} created by user ID {user_id}.")
+        logging.info(f"Client {first_name} {last_name} created by user '{username}'.")
         return f"Client {first_name} {last_name} created successfully."
     else:
         logging.error(
-            f"Error creating client {first_name} {last_name} by user ID {user_id}."
+            f"Error creating client {first_name} {last_name} by user '{username}'."
         )
         return "An error occurred while creating the client."
 
 
-def update_client(
-    user_id,
-    client_id,
-    first_name=None,
-    last_name=None,
-    email=None,
-    phone=None,
-    company_name=None,
-):
-    """Update an existing client's information.
-
-    Args:
-        user_id (int): The ID of the user updating the client.
-        client_id (int): The ID of the client to update.
-        first_name (str, optional): New first name.
-        last_name (str, optional): New last name.
-        email (str, optional): New email address.
-        phone (str, optional): New phone number.
-        company_name (str, optional): New company name.
-
-    Returns:
-        str: Success message or error message.
-    """
-    client = Client.get_by_id(client_id)
+def update_client(username, client_email, first_name=None, last_name=None, email=None, phone=None, company_name=None):
+    """Update an existing client's information."""
+    client = Client.get_by_email(client_email)
     if not client:
-        logging.warning(f"Client ID {client_id} not found.")
+        logging.warning(f"Client with email '{client_email}' not found.")
         return "Client not found."
 
-    if not has_permission(
-        user_id, "client", "update", resource_owner_id=client.sales_contact_id
-    ):
+    if not has_permission(username, "client", "update", resource_owner_username=client.sales_contact_id):
         return "Permission denied."
 
-    try:
-        if first_name:
-            client.first_name = first_name
-        if last_name:
-            client.last_name = last_name
-        if email:
-            client.email = email
-        if phone:
-            client.phone = phone
-        if company_name:
-            client.company_name = company_name
+    if first_name:
+        client.first_name = first_name
+    if last_name:
+        client.last_name = last_name
+    if email:
+        client.email = email
+    if phone:
+        client.phone = phone
+    if company_name:
+        client.company_name = company_name
 
-        result = client.update()
-        if result is True:
-            logging.info(f"Client ID {client_id} updated by user ID {user_id}.")
-            return f"Client ID {client_id} updated successfully."
-        elif isinstance(result, str):
-            # An error message was returned from the model
-            return result
-        else:
-            logging.error(f"Error updating client ID {client_id} by user ID {user_id}.")
-            return "Error updating client."
-    except sqlite3.Error as e:
-        logging.error(f"Database error updating client: {e}")
-        return "Database error."
+    result = client.update()
+    if result is True:
+        logging.info(f"Client '{client_email}' updated by user '{username}'.")
+        return f"Client '{client_email}' updated successfully."
+    elif isinstance(result, str):
+        return result
+    else:
+        logging.error(f"Error updating client '{client_email}' by user '{username}'.")
+        return "Error updating client."
 
 
-def delete_client(user_id, client_id):
-    """Delete a client.
-
-    Args:
-        user_id (int): The ID of the user deleting the client.
-        client_id (int): The ID of the client to delete.
-
-    Returns:
-        str: Success message or error message.
-    """
-    client = Client.get_by_id(client_id)
+def delete_client(username, client_email):
+    """Delete a client."""
+    client = Client.get_by_email(client_email)
     if not client:
-        logging.warning(f"Client ID {client_id} not found.")
+        logging.warning(f"Client with email '{client_email}' not found.")
         return "Client not found."
 
-    if not has_permission(
-        user_id, "client", "delete", resource_owner_id=client.sales_contact_id
-    ):
+    if not has_permission(username, "client", "delete", resource_owner_username=client.sales_contact_id):
         return "Permission denied."
 
-    try:
-        if client.delete():
-            logging.info(f"Client ID {client_id} deleted by user ID {user_id}.")
-            return f"Client ID {client_id} deleted successfully."
-        else:
-            logging.error(f"Error deleting client ID {client_id} by user ID {user_id}.")
-            return "Error deleting client."
-    except sqlite3.Error as e:
-        logging.error(f"Database error deleting client: {e}")
-        return "Database error."
+    if client.delete():
+        logging.info(f"Client '{client_email}' deleted by user '{username}'.")
+        return f"Client '{client_email}' deleted successfully."
+    else:
+        logging.error(f"Error deleting client '{client_email}' by user '{username}'.")
+        return "Error deleting client."
 
 
-def create_contract(user_id, client_id, total_amount, amount_remaining, status):
-    """Create a new contract for a client.
-
-    Args:
-        user_id (int): The ID of the user creating the contract.
-        client_id (int): The ID of the client.
-        total_amount (float): Total contract amount.
-        amount_remaining (float): Amount remaining.
-        status (str): Contract status ('Signed' or 'Not Signed').
-
-    Returns:
-        str: Success message or error message.
-    """
-    if not has_permission(user_id, "contract", "create"):
+def create_contract(username, client_email, total_amount, amount_remaining, status):
+    """Create a new contract for a client."""
+    if not has_permission(username, "contract", "create"):
         return "Permission denied."
 
-    client = Client.get_by_id(client_id)
+    client = Client.get_by_email(client_email)
     if not client:
-        logging.warning(f"Client ID {client_id} not found.")
+        logging.warning(f"Client email '{client_email}' not found.")
         return "Client not found."
 
-    try:
-        result = Contract.create(
-            client_id=client_id,
-            sales_contact_id=user_id,
-            total_amount=total_amount,
-            amount_remaining=amount_remaining,
-            status=status,
+    result = Contract.create(
+        client_id=client_email,
+        sales_contact_id=username,
+        total_amount=total_amount,
+        amount_remaining=amount_remaining,
+        status=status,
+    )
+
+    if isinstance(result, str):
+        return result
+    elif result:
+        logging.info(
+            f"Contract created for client '{client_email}' by user '{username}'."
         )
-
-        if isinstance(result, str):
-            # An error message was returned from the model
-            return result
-        elif result:
-            logging.info(
-                f"Contract created for client ID {client_id} by user ID {user_id}."
-            )
-            return "Contract created successfully."
-        else:
-            logging.error(
-                f"Error creating contract for client ID {client_id} by user ID {user_id}."
-            )
-            return "Error creating contract."
-    except sqlite3.Error as e:
-        logging.error(f"Database error creating contract: {e}")
-        return "Database error."
+        return "Contract created successfully."
+    else:
+        logging.error(
+            f"Error creating contract for client '{client_email}' by user '{username}'."
+        )
+        return "Error creating contract."
 
 
-def update_contract(user_id, contract_id, total_amount, amount_remaining, status):
-    """Update an existing contract.
-
-    Args:
-        user_id (int): The ID of the user updating the contract.
-        contract_id (int): The ID of the contract to update.
-        total_amount (float): New total amount.
-        amount_remaining (float): New amount remaining.
-        status (str): New status ('Signed' or 'Not Signed').
-
-    Returns:
-        str: Success message or error message.
-    """
+def update_contract(username, contract_id, total_amount, amount_remaining, status):
+    """Update an existing contract."""
     contract = Contract.get_by_id(contract_id)
     if not contract:
         logging.warning(f"Contract ID {contract_id} not found.")
         return "Contract not found."
 
-    if not has_permission(
-        user_id, "contract", "update", resource_owner_id=contract.sales_contact_id
-    ):
+    if not has_permission(username, "contract", "update", resource_owner_username=contract.sales_contact_id):
         return "Permission denied."
 
-    try:
-        contract.total_amount = total_amount
-        contract.amount_remaining = amount_remaining
-        contract.status = status
+    contract.total_amount = total_amount
+    contract.amount_remaining = amount_remaining
+    contract.status = status
 
-        result = contract.update()
-        if result is True:
-            logging.info(f"Contract ID {contract_id} updated by user ID {user_id}.")
-            return f"Contract ID {contract_id} updated successfully."
-        elif isinstance(result, str):
-            # An error message was returned from the model
-            return result
-        else:
-            logging.error(
-                f"Error updating contract ID {contract_id} by user ID {user_id}."
-            )
-            return "Error updating contract."
-    except sqlite3.Error as e:
-        logging.error(f"Database error updating contract: {e}")
-        return "Database error."
+    result = contract.update()
+    if result is True:
+        logging.info(f"Contract ID {contract_id} updated by user '{username}'.")
+        return f"Contract ID {contract_id} updated successfully."
+    elif isinstance(result, str):
+        return result
+    else:
+        logging.error(
+            f"Error updating contract ID {contract_id} by user '{username}'."
+        )
+        return "Error updating contract."
 
 
-def delete_contract(user_id, contract_id):
-    """Delete a contract.
-
-    Args:
-        user_id (int): The ID of the user deleting the contract.
-        contract_id (int): The ID of the contract to delete.
-
-    Returns:
-        str: Success message or error message.
-    """
+def delete_contract(username, contract_id):
+    """Delete a contract."""
     contract = Contract.get_by_id(contract_id)
     if not contract:
         logging.warning(f"Contract ID {contract_id} not found.")
         return "Contract not found."
 
-    if not has_permission(
-        user_id, "contract", "delete", resource_owner_id=contract.sales_contact_id
-    ):
+    if not has_permission(username, "contract", "delete", resource_owner_username=contract.sales_contact_id):
         return "Permission denied."
 
-    try:
-        if contract.delete():
-            logging.info(f"Contract ID {contract_id} deleted by user ID {user_id}.")
-            return f"Contract ID {contract_id} deleted successfully."
-        else:
-            logging.error(
-                f"Error deleting contract ID {contract_id} by user ID {user_id}."
-            )
-            return "Error deleting contract."
-    except sqlite3.Error as e:
-        logging.error(f"Database error deleting contract: {e}")
-        return "Database error."
+    if contract.delete():
+        logging.info(f"Contract ID {contract_id} deleted by user '{username}'.")
+        return f"Contract ID {contract_id} deleted successfully."
+    else:
+        logging.error(
+            f"Error deleting contract ID {contract_id} by user '{username}'."
+        )
+        return "Error deleting contract."
 
 
-def create_event(
-    user_id, contract_id, event_date_start, event_date_end, location, attendees, notes
-):
-    """Create a new event associated with a contract.
-
-    Args:
-        user_id (int): The ID of the user creating the event.
-        contract_id (int): The ID of the associated contract.
-        event_date_start (str): Event start date and time.
-        event_date_end (str): Event end date and time.
-        location (str): Event location.
-        attendees (int): Number of attendees.
-        notes (str): Additional notes.
-
-    Returns:
-        str: Success message or error message.
-    """
-    # Check if the contract exists and is signed
+def create_event(username, contract_id, event_date_start, event_date_end, location, attendees, notes):
+    """Create a new event associated with a contract."""
     contract = Contract.get_by_id(contract_id)
     if not contract or contract.status != "Signed":
         logging.warning(f"Contract ID {contract_id} is not valid or not signed.")
         return "Contract not valid or not signed."
 
-    # Fetch the client to verify ownership
-    client = Client.get_by_id(contract.client_id)
+    client = Client.get_by_email(contract.client_id)
     if not client:
         logging.warning(f"Client associated with contract ID {contract_id} not found.")
         return "Client not found."
 
-    resource_owner_id = client.sales_contact_id
+    resource_owner_username = client.sales_contact_id
 
-    if not has_permission(
-        user_id, "event", "create", resource_owner_id=resource_owner_id
-    ):
+    if not has_permission(username, "event", "create", resource_owner_username=resource_owner_username):
         return "Permission denied."
 
-    try:
-        result = Event.create(
-            contract_id=contract_id,
-            support_contact_id=None,  # Initially, no support contact assigned
-            event_date_start=event_date_start,
-            event_date_end=event_date_end,
-            location=location,
-            attendees=attendees,
-            notes=notes,
+    result = Event.create(
+        contract_id=contract_id,
+        support_contact_id=None,  # Initially, no support contact assigned
+        event_date_start=event_date_start,
+        event_date_end=event_date_end,
+        location=location,
+        attendees=attendees,
+        notes=notes,
+    )
+
+    if isinstance(result, str):
+        return result
+    elif result:
+        logging.info(
+            f"Event created successfully for contract ID {contract_id} by user '{username}'."
         )
-
-        if isinstance(result, str):
-            # An error message was returned from the model
-            return result
-        elif result:
-            logging.info(
-                f"Event created successfully for contract ID {contract_id} by user ID {user_id}."
-            )
-            return "Event created successfully."
-        else:
-            logging.error(
-                f"Error creating event for contract ID {contract_id} by user ID {user_id}."
-            )
-            return "Error creating event."
-    except sqlite3.Error as e:
-        logging.error(f"Database error creating event: {e}")
-        return "Database error."
+        return "Event created successfully."
+    else:
+        logging.error(
+            f"Error creating event for contract ID {contract_id} by user '{username}'."
+        )
+        return "Error creating event."
 
 
-def update_event(user_id, event_id, **kwargs):
-    """Update an existing event.
-
-    Args:
-        user_id (int): The ID of the user updating the event.
-        event_id (int): The ID of the event to update.
-        **kwargs: Arbitrary keyword arguments representing fields to update.
-
-    Returns:
-        str: Success message or error message.
-    """
+def update_event(username, event_id, **kwargs):
+    """Update an existing event."""
     event = Event.get_by_id(event_id)
     if not event:
         logging.warning(f"Event ID {event_id} not found.")
         return "Event not found."
 
-    # Determine the resource owner
-    resource_owner_id = event.support_contact_id or event.contract.sales_contact_id
+    # Need to get contract and client to determine owner
+    contract = Contract.get_by_id(event.contract_id)
+    if not contract:
+        logging.warning(f"Contract ID {event.contract_id} not found for event {event_id}.")
+        return "Contract not found."
 
-    if not has_permission(
-        user_id, "event", "update", resource_owner_id=resource_owner_id
-    ):
+    client = Client.get_by_email(contract.client_id)
+    if not client:
+        logging.warning(f"Client email '{contract.client_id}' not found.")
+        return "Client not found."
+
+    resource_owner_username = client.sales_contact_id
+
+    if not has_permission(username, "event", "update", resource_owner_username=resource_owner_username):
         return "Permission denied."
 
-    try:
-        for key, value in kwargs.items():
-            setattr(event, key, value)
-
-        result = event.update()
-        if result is True:
-            logging.info(
-                f"Event ID {event_id} updated successfully by user ID {user_id}."
-            )
-            return f"Event ID {event_id} updated successfully."
-        elif isinstance(result, str):
-            # An error message was returned from the model
-            return result
-        else:
-            logging.error(f"Error updating event ID {event_id} by user ID {user_id}.")
-            return "Error updating event."
-    except sqlite3.Error as e:
-        logging.error(f"Database error updating event: {e}")
-        return "Database error."
-
-
-def delete_event(user_id, event_id):
-    """Delete an event.
-
-    Args:
-        user_id (int): The ID of the user deleting the event.
-        event_id (int): The ID of the event to delete.
-
-    Returns:
-        str: Success message or error message.
-    """
-    event = Event.get_by_id(event_id)
-    if not event:
-        logging.warning(f"Event ID {event_id} not found.")
-        return "Event not found."
-
-    # Determine the resource owner
-    resource_owner_id = event.support_contact_id or event.contract.sales_contact_id
-
-    if not has_permission(
-        user_id, "event", "delete", resource_owner_id=resource_owner_id
-    ):
-        return "Permission denied."
-
-    try:
-        if event.delete():
-            logging.info(f"Event ID {event_id} deleted by user ID {user_id}.")
-            return f"Event ID {event_id} deleted successfully."
-        else:
-            logging.error(f"Error deleting event ID {event_id} by user ID {user_id}.")
-            return "Error deleting event."
-    except sqlite3.Error as e:
-        logging.error(f"Database error deleting event: {e}")
-        return "Database error."
-
-
-def assign_support_to_event(user_id, event_id, support_user_id):
-    """Assign a support user to an event.
-
-    Args:
-        user_id (int): The ID of the management user assigning support.
-        event_id (int): The ID of the event.
-        support_user_id (int): The ID of the support user to assign.
-
-    Returns:
-        str: Success message or error message.
-    """
-    # Only Management can assign support contacts
-    if not has_permission(user_id, "event", "update"):
-        return "Permission denied."
-
-    event = Event.get_by_id(event_id)
-    if not event:
-        logging.warning(f"Event ID {event_id} not found.")
-        return "Event not found."
-
-    # Assign support contact
-    event.support_contact_id = support_user_id
+    for key, value in kwargs.items():
+        setattr(event, key, value)
 
     result = event.update()
     if result is True:
         logging.info(
-            f"Support contact ID {support_user_id} assigned to event ID {event_id} by user ID {user_id}."
+            f"Event ID {event_id} updated successfully by user '{username}'."
+        )
+        return f"Event ID {event_id} updated successfully."
+    elif isinstance(result, str):
+        return result
+    else:
+        logging.error(f"Error updating event ID {event_id} by user '{username}'.")
+        return "Error updating event."
+
+
+def delete_event(username, event_id):
+    """Delete an event."""
+    event = Event.get_by_id(event_id)
+    if not event:
+        logging.warning(f"Event ID {event_id} not found.")
+        return "Event not found."
+
+    contract = Contract.get_by_id(event.contract_id)
+    if not contract:
+        logging.warning(f"Contract ID {event.contract_id} not found for event {event_id}.")
+        return "Contract not found."
+
+    client = Client.get_by_email(contract.client_id)
+    if not client:
+        logging.warning(f"Client '{contract.client_id}' not found.")
+        return "Client not found."
+
+    resource_owner_username = client.sales_contact_id
+
+    if not has_permission(username, "event", "delete", resource_owner_username=resource_owner_username):
+        return "Permission denied."
+
+    if event.delete():
+        logging.info(f"Event ID {event_id} deleted by user '{username}'.")
+        return f"Event ID {event_id} deleted successfully."
+    else:
+        logging.error(f"Error deleting event ID {event_id} by user '{username}'.")
+        return "Error deleting event."
+
+
+def assign_support_to_event(username, event_id, support_user_username):
+    """Assign a support user to an event."""
+    # Only Management can assign support contacts
+    if not has_permission(username, "event", "update"):
+        return "Permission denied."
+
+    event = Event.get_by_id(event_id)
+    if not event:
+        logging.warning(f"Event ID {event_id} not found.")
+        return "Event not found."
+
+    event.support_contact_id = support_user_username
+    result = event.update()
+    if result is True:
+        logging.info(
+            f"Support contact '{support_user_username}' assigned to event ID {event_id} by user '{username}'."
         )
         return f"Support contact assigned to event ID {event_id}."
     elif isinstance(result, str):
-        # An error message was returned from the model
         return result
     else:
         logging.error(
-            f"Error assigning support contact to event ID {event_id} by user ID {user_id}."
+            f"Error assigning support contact to event ID {event_id} by user '{username}'."
         )
         return "Error assigning support contact."
 
 
-def create_user(admin_user_id, username, password, role_id, email):
-    """Create a new user.
-
-    Args:
-        admin_user_id (int): The ID of the admin user creating the new user.
-        username (str): The username for the new user.
-        password (str): The password for the new user.
-        role_id (int): The role ID for the new user.
-        email (str): The email address for the new user.
-
-    Returns:
-        str: Success message or error message.
-    """
-    if not has_permission(admin_user_id, "user", "create"):
+def create_user(admin_username, username, password, role_name, email):
+    """Create a new user."""
+    if not has_permission(admin_username, "user", "create"):
         return "Permission denied."
 
-    try:
-        result = User.create(
-            username=username, password=password, role_id=role_id, email=email
-        )
+    result = User.create(username=username, password=password, role_id=role_name, email=email)
 
-        if isinstance(result, str):
-            # An error message was returned from the model
-            return result
-        elif result:
-            logging.info(f"User '{username}' created by admin user ID {admin_user_id}.")
-            return f"User '{username}' created successfully."
-        else:
-            logging.error(
-                f"Error creating user '{username}' by admin user ID {admin_user_id}."
-            )
-            return "Error creating user."
-    except sqlite3.Error as e:
-        logging.error(f"Database error creating user: {e}")
-        return "Database error."
+    if isinstance(result, str):
+        return result
+    elif result:
+        logging.info(f"User '{username}' created by admin user '{admin_username}'.")
+        return f"User '{username}' created successfully."
+    else:
+        logging.error(f"Error creating user '{username}' by admin user '{admin_username}'.")
+        return "Error creating user."
 
 
-def update_user(
-    admin_user_id, user_id, username=None, password=None, role_id=None, email=None
-):
-    """Update an existing user's information.
-
-    Args:
-        admin_user_id (int): The ID of the admin user updating the user.
-        user_id (int): The ID of the user to update.
-        username (str, optional): New username.
-        password (str, optional): New password.
-        role_id (int, optional): New role ID.
-        email (str, optional): New email address.
-
-    Returns:
-        str: Success message or error message.
-    """
-    if not has_permission(admin_user_id, "user", "update"):
+def update_user(admin_username, username, new_username=None, password=None, role_name=None, email=None):
+    """Update an existing user's information."""
+    if not has_permission(admin_username, "user", "update"):
         return "Permission denied."
 
-    user = User.get_by_id(user_id)
+    user = User.get_by_username(username)
     if not user:
         logging.warning(
-            f"User ID {user_id} not found for update by admin user ID {admin_user_id}."
+            f"User '{username}' not found for update by admin user '{admin_username}'."
         )
         return "User not found."
 
-    try:
-        if username:
-            user.username = username
-        if password:
-            # Hash the new password
-            user.password_hash = bcrypt.hashpw(
-                password.encode("utf-8"), bcrypt.gensalt()
-            )
-        if role_id:
-            user.role_id = role_id
-        if email:
-            user.email = email
+    if new_username:
+        user.username = new_username
+    if password:
+        # Hash the new password
+        user.password_hash = bcrypt.hashpw(
+            password.encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
+    if role_name:
+        user.role_id = role_name
+    if email:
+        user.email = email
 
-        result = user.update()
-        if result is True:
-            logging.info(f"User ID {user_id} updated by admin user ID {admin_user_id}.")
-            return f"User ID {user_id} updated successfully."
-        elif isinstance(result, str):
-            # An error message was returned from the model
-            return result
-        else:
-            logging.error(
-                f"Error updating user ID {user_id} by admin user ID {admin_user_id}."
-            )
-            return "Error updating user."
-    except sqlite3.Error as e:
-        logging.error(f"Database error updating user: {e}")
-        return "Database error."
+    result = user.update()
+    if result is True:
+        logging.info(f"User '{username}' updated by admin user '{admin_username}'.")
+        return f"User '{username}' updated successfully."
+    elif isinstance(result, str):
+        return result
+    else:
+        logging.error(
+            f"Error updating user '{username}' by admin user '{admin_username}'."
+        )
+        return "Error updating user."
 
 
-def delete_user(admin_user_id, user_id):
-    """Delete a user.
-
-    Args:
-        admin_user_id (int): The ID of the admin user deleting the user.
-        user_id (int): The ID of the user to delete.
-
-    Returns:
-        str: Success message or error message.
-    """
-    if not has_permission(admin_user_id, "user", "delete"):
+def delete_user(admin_username, username):
+    """Delete a user."""
+    if not has_permission(admin_username, "user", "delete"):
         return "Permission denied."
 
-    user = User.get_by_id(user_id)
+    user = User.get_by_username(username)
     if not user:
         logging.warning(
-            f"User ID {user_id} not found for deletion by admin user ID {admin_user_id}."
+            f"User '{username}' not found for deletion by admin user '{admin_username}'."
         )
         return "User not found."
 
-    try:
-        if user.delete():
-            logging.info(f"User ID {user_id} deleted by admin user ID {admin_user_id}.")
-            return f"User ID {user_id} deleted successfully."
-        else:
-            logging.error(
-                f"Error deleting user ID {user_id} by admin user ID {admin_user_id}."
-            )
-            return "Error deleting user."
-    except sqlite3.Error as e:
-        logging.error(f"Database error deleting user: {e}")
-        return "Database error."
+    if user.delete():
+        logging.info(f"User '{username}' deleted by admin user '{admin_username}'.")
+        return f"User '{username}' deleted successfully."
+    else:
+        logging.error(
+            f"Error deleting user '{username}' by admin user '{admin_username}'."
+        )
+        return "Error deleting user."
 
 
 def get_all_clients():
-    """Retrieve all clients.
-
-    Returns:
-        list: A list of dictionaries representing clients.
-    """
+    """Retrieve all clients."""
     clients = []
     try:
         with Database.connect() as conn:
@@ -661,21 +447,19 @@ def get_all_clients():
 
 
 def get_all_contracts():
-    """Retrieve all contracts along with client names.
-
-    Returns:
-        list: A list of dictionaries representing contracts.
-    """
+    """Retrieve all contracts along with client names."""
     contracts = []
     try:
         with Database.connect() as conn:
             cursor = conn.cursor()
+            # Now clients are identified by email, and contracts have a client_id referencing that email.
+            # But we do not have clients.id anymore, we must join on email.
             cursor.execute(
                 """
                 SELECT contracts.*, clients.first_name AS client_first_name, clients.last_name AS client_last_name
                 FROM contracts
-                JOIN clients ON contracts.client_id = clients.id
-            """
+                JOIN clients ON contracts.client_id = clients.email
+                """
             )
             rows = cursor.fetchall()
             contracts = [
@@ -691,41 +475,36 @@ def get_all_contracts():
         return []
 
 
-def get_all_events(user_id):
-    """Retrieve all events accessible to the user.
-
-    Args:
-        user_id (int): The ID of the user requesting events.
-
-    Returns:
-        list: A list of dictionaries representing events.
-    """
+def get_all_events(username):
+    """Retrieve all events accessible to the user."""
     events = []
     try:
-        user = User.get_by_id(user_id)
+        user = User.get_by_username(username)
         if not user:
-            logging.warning(f"User with ID {user_id} not found.")
+            logging.warning(f"User '{username}' not found.")
             return []
 
-        role = Role.get_by_id(user.role_id)
+        role = Role.get_by_name(user.role_id)
         if not role:
             logging.error(
-                f"Role with ID {user.role_id} not found for user ID {user_id}."
+                f"Role '{user.role_id}' not found for user '{username}'."
             )
             return []
 
         with Database.connect() as conn:
             cursor = conn.cursor()
+            # Events join with contracts via contract_id, and contracts join with clients via email.
+            # We'll select event + contract + client names
             if role.name == "Support":
                 cursor.execute(
                     """
                     SELECT events.*, contracts.client_id, clients.first_name AS client_first_name, clients.last_name AS client_last_name
                     FROM events
                     JOIN contracts ON events.contract_id = contracts.id
-                    JOIN clients ON contracts.client_id = clients.id
+                    JOIN clients ON contracts.client_id = clients.email
                     WHERE events.support_contact_id = ?
-                """,
-                    (user_id,),
+                    """,
+                    (username,),
                 )
             else:
                 cursor.execute(
@@ -733,8 +512,8 @@ def get_all_events(user_id):
                     SELECT events.*, contracts.client_id, clients.first_name AS client_first_name, clients.last_name AS client_last_name
                     FROM events
                     JOIN contracts ON events.contract_id = contracts.id
-                    JOIN clients ON contracts.client_id = clients.id
-                """
+                    JOIN clients ON contracts.client_id = clients.email
+                    """
                 )
 
             rows = cursor.fetchall()
@@ -752,12 +531,7 @@ def get_all_events(user_id):
 
 
 def get_all_users():
-    """
-    Retrieves all users from the database.
-
-    Returns:
-        list of User: A list of User objects.
-    """
+    """Retrieves all users from the database."""
     try:
         users = User.get_all_users()
         return users
@@ -767,14 +541,7 @@ def get_all_users():
 
 
 def filter_contracts_by_status(status):
-    """Filter contracts by status.
-
-    Args:
-        status (str): The status to filter by ('Signed' or 'Not Signed').
-
-    Returns:
-        list: A list of dictionaries representing contracts.
-    """
+    """Filter contracts by status."""
     contracts = []
     try:
         with Database.connect() as conn:
@@ -783,9 +550,9 @@ def filter_contracts_by_status(status):
                 """
                 SELECT contracts.*, clients.first_name AS client_first_name, clients.last_name AS client_last_name
                 FROM contracts
-                JOIN clients ON contracts.client_id = clients.id
+                JOIN clients ON contracts.client_id = clients.email
                 WHERE contracts.status = ?
-            """,
+                """,
                 (status,),
             )
             rows = cursor.fetchall()
@@ -803,11 +570,7 @@ def filter_contracts_by_status(status):
 
 
 def filter_events_unassigned():
-    """Retrieve events that have no support contact assigned.
-
-    Returns:
-        list: A list of dictionaries representing unassigned events.
-    """
+    """Retrieve events that have no support contact assigned."""
     events = []
     try:
         with Database.connect() as conn:
@@ -817,9 +580,9 @@ def filter_events_unassigned():
                 SELECT events.*, contracts.client_id, clients.first_name AS client_first_name, clients.last_name AS client_last_name
                 FROM events
                 JOIN contracts ON events.contract_id = contracts.id
-                JOIN clients ON contracts.client_id = clients.id
+                JOIN clients ON contracts.client_id = clients.email
                 WHERE events.support_contact_id IS NULL
-            """
+                """
             )
             rows = cursor.fetchall()
             events = [
@@ -835,15 +598,8 @@ def filter_events_unassigned():
         return []
 
 
-def filter_events_by_support_user(support_user_id):
-    """Retrieve events assigned to a specific support user.
-
-    Args:
-        support_user_id (int): The ID of the support user.
-
-    Returns:
-        list: A list of dictionaries representing events.
-    """
+def filter_events_by_support_user(support_user_username):
+    """Retrieve events assigned to a specific support user."""
     events = []
     try:
         with Database.connect() as conn:
@@ -853,10 +609,10 @@ def filter_events_by_support_user(support_user_id):
                 SELECT events.*, contracts.client_id, clients.first_name AS client_first_name, clients.last_name AS client_last_name
                 FROM events
                 JOIN contracts ON events.contract_id = contracts.id
-                JOIN clients ON contracts.client_id = clients.id
+                JOIN clients ON contracts.client_id = clients.email
                 WHERE events.support_contact_id = ?
-            """,
-                (support_user_id,),
+                """,
+                (support_user_username,),
             )
             rows = cursor.fetchall()
             events = [
