@@ -1,9 +1,25 @@
-# permissions.py
+"""Permissions module for Epic Events CRM.
+
+This module handles permission checks for user actions on various entities,
+ensuring that users have the appropriate rights to perform actions like create,
+read, update, or delete on clients, contracts, and events.
+"""
 
 from models import User, Permission
 
 
 def has_permission(user_id, entity, action, resource_owner_id=None):
+    """Check if a user has permission to perform a specific action on an entity.
+
+    Args:
+        user_id (int): The ID of the user attempting the action.
+        entity (str): The entity type ('client', 'contract', 'event').
+        action (str): The action to perform ('create', 'read', 'update', 'delete').
+        resource_owner_id (int, optional): The ID of the resource owner, if applicable.
+
+    Returns:
+        bool: True if the user has the required permission, False otherwise.
+    """
     user = User.get_by_id(user_id)
     if not user:
         return False
