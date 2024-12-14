@@ -23,7 +23,9 @@ This is a Command-Line Interface (CLI) application for managing customer relatio
 2. Set up virtual env
 
 `python -m venv venv`
-`source venv/bin/activate`  # Windows: venv\Scripts\activate
+`source venv/bin/activate`
+
+Windows Users have to use this command in the folder's directory: `venv\Scripts\activate`
 
 2. Install Dependencies
 
