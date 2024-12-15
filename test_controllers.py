@@ -1,6 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch, call
-import bcrypt
+from unittest.mock import Mock, patch
 from models import User, Client, Contract, Event, Permission, Role, Database
 from controllers import (
     has_permission,
@@ -29,16 +28,12 @@ from controllers import (
 class TestControllers(unittest.TestCase):
     def setUp(self):
         # Mock user setup
-        self.mock_user = Mock()
-        self.mock_user.username = "test_user"
-        self.mock_user.role_id = "Commercial"
-        self.mock_user.email = "test@example.com"
+        self.mock_user = Mock(username="test_user", role_id="Commercial", email="test@example.com")
 
-        # Mock role setup with expanded permissions
-        self.mock_role = Mock()
-        self.mock_role.name = "Commercial"
+        # Mock role setup
+        self.mock_role = Mock(name="Commercial")
 
-        # Mock permissions setup with all necessary permissions
+        # Mock permissions setup
         self.mock_permissions = [
             Mock(entity="client", action="create"),
             Mock(entity="client", action="update"),
@@ -46,29 +41,32 @@ class TestControllers(unittest.TestCase):
             Mock(entity="contract", action="create"),
             Mock(entity="contract", action="update"),
             Mock(entity="event", action="create"),
-            Mock(entity="user", action="create"),
-            Mock(entity="event", action="assign_support")
+            Mock(entity="event", action="assign_support"),
+            Mock(entity="user", action="create")
         ]
 
         # Mock client setup
-        self.mock_client = Mock()
-        self.mock_client.email = "client@example.com"
-        self.mock_client.first_name = "John"
-        self.mock_client.last_name = "Doe"
-        self.mock_client.sales_contact_id = "test_user"
+        self.mock_client = Mock(
+            email="client@example.com",
+            first_name="John",
+            last_name="Doe",
+            sales_contact_id="test_user"
+        )
 
         # Mock contract setup
-        self.mock_contract = Mock()
-        self.mock_contract.id = 1
-        self.mock_contract.client_id = "client@example.com"
-        self.mock_contract.sales_contact_id = "test_user"
-        self.mock_contract.status = "Signed"
+        self.mock_contract = Mock(
+            id=1,
+            client_id="client@example.com",
+            sales_contact_id="test_user",
+            status="Signed"
+        )
 
         # Mock event setup
-        self.mock_event = Mock()
-        self.mock_event.id = 1
-        self.mock_event.contract_id = 1
-        self.mock_event.support_contact_id = None
+        self.mock_event = Mock(
+            id=1,
+            contract_id=1,
+            support_contact_id=None
+        )
 
         # Helper method for creating database mocks
         def create_db_mock(return_value):
@@ -80,7 +78,7 @@ class TestControllers(unittest.TestCase):
             mock_cm.__enter__ = Mock(return_value=mock_conn)
             mock_cm.__exit__ = Mock(return_value=None)
             return mock_cm
-        
+
         self.create_db_mock = create_db_mock
 
     def test_has_permission_user_not_found(self):
@@ -205,7 +203,7 @@ class TestControllers(unittest.TestCase):
             {"email": "client1@example.com", "first_name": "John", "last_name": "Doe"},
             {"email": "client2@example.com", "first_name": "Jane", "last_name": "Smith"}
         ]
-        
+
         with patch('models.Database.connect', return_value=self.create_db_mock(mock_data)):
             results = get_all_clients()
             self.assertEqual(len(results), 2)
@@ -218,7 +216,7 @@ class TestControllers(unittest.TestCase):
             "client_first_name": "John",
             "client_last_name": "Doe"
         }]
-        
+
         with patch('models.Database.connect', return_value=self.create_db_mock(mock_data)):
             results = get_all_contracts()
             self.assertEqual(len(results), 1)
@@ -231,7 +229,7 @@ class TestControllers(unittest.TestCase):
             "client_first_name": "John",
             "client_last_name": "Doe"
         }]
-        
+
         with patch('models.Database.connect', return_value=self.create_db_mock(mock_data)):
             results = filter_contracts_by_status("Active")
             self.assertEqual(len(results), 1)
@@ -242,13 +240,14 @@ class TestControllers(unittest.TestCase):
             with patch('models.Role.get_by_name', return_value=self.mock_role):
                 with patch('models.Permission.get_permissions_by_role', return_value=self.mock_permissions):
                     with patch('models.Event.get_by_id', return_value=self.mock_event):
-                        with patch.object(self.mock_event, 'update', return_value=True):
-                            result = assign_support_to_event(
-                                "admin_user",
-                                1,
-                                "support_user"
-                            )
-                            self.assertIn("Support contact assigned", result)
+                        with patch('controllers.has_permission', return_value=True):  # Ensure permission is granted
+                            with patch.object(self.mock_event, 'update', return_value=True):
+                                result = assign_support_to_event(
+                                    "admin_user",
+                                    1,
+                                    "support_user"
+                                )
+                                self.assertIn("Support contact assigned", result)
 
 if __name__ == '__main__':
     unittest.main()
