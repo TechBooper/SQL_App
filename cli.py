@@ -485,7 +485,7 @@ def handle_create_contract(session):
         else:
             print("Invalid selection. Please enter 1 or 2.\n")
     except ValueError:
-        print("Invalid input. Please enter valid numbers for amounts.\n")
+        print("Invalid input. Please enter valid numbers.\n")
 
 
 def handle_update_contract(session):

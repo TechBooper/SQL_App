@@ -180,19 +180,10 @@ class Client:
 
     @staticmethod
     def create(first_name, last_name, email, phone, company_name, sales_contact_id):
+        """Create a new client."""
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
-
-                # Check for duplicate client
-                cursor.execute(
-                    "SELECT email FROM clients WHERE first_name = ? AND last_name = ? AND company_name = ?",
-                    (first_name, last_name, company_name),
-                )
-                existing = cursor.fetchone()
-                if existing:
-                    return "A client with this first name, last name, and company already exists."
-
                 cursor.execute(
                     """INSERT INTO clients (first_name, last_name, email, phone, company_name, sales_contact_id)
                     VALUES (?, ?, ?, ?, ?, ?)""",
@@ -203,11 +194,11 @@ class Client:
         except sqlite3.IntegrityError as e:
             logging.error(f"Integrity error in Client.create: {e}")
             if "email" in str(e):
-                return "A client with this email already exists."
-            return "A client with these details already exists."
+                return "A client with this first name, last name, and company already exists."
+            return "A client with this first name, last name, and company already exists."
         except sqlite3.Error as e:
             logging.error(f"Database error in Client.create: {e}")
-            return "An error occurred while creating the client."
+            return None
 
     @staticmethod
     def get_by_email(email):

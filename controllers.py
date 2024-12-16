@@ -149,26 +149,37 @@ def create_contract(username, client_email, total_amount, amount_remaining, stat
         logging.warning(f"Client email '{client_email}' not found.")
         return "Client not found."
 
-    result = Contract.create(
-        client_id=client_email,
-        sales_contact_id=username,
-        total_amount=total_amount,
-        amount_remaining=amount_remaining,
-        status=status,
-    )
+    try:
+        result = Contract.create(
+            client_id=client_email,
+            sales_contact_id=username,
+            total_amount=total_amount,
+            amount_remaining=amount_remaining,
+            status=status,
+        )
 
-    if isinstance(result, str):
-        return result
-    elif result:
-        logging.info(
-            f"Contract created for client '{client_email}' by user '{username}'."
-        )
-        return "Contract created successfully."
-    else:
-        logging.error(
-            f"Error creating contract for client '{client_email}' by user '{username}'."
-        )
-        return "Error creating contract."
+        logging.debug(f"Result from Contract.create: {result}")
+
+        if isinstance(result, str):
+            return result
+        elif result:
+            logging.info(
+                f"Contract created for client '{client_email}' by user '{username}'."
+            )
+            return "Contract created successfully."
+        else:
+            logging.error(
+                f"Error creating contract for client '{client_email}' by user '{username}'."
+            )
+            return "Error creating contract."
+        
+    except sqlite3.IntegrityError as e:
+        logging.error(f"IntegrityError message: {e}")
+        error_msg = str(e)
+        if "CHECK constraint failed: status" in error_msg:
+            return "CHECK constraint failed: status IN ('Signed', 'Not Signed')"
+        return "An error occurred while creating the contract."
+
 
 
 def update_contract(username, contract_id, total_amount, amount_remaining, status):
