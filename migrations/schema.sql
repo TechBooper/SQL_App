@@ -17,7 +17,7 @@ We will rely on REAL for amounts since SQLite stores numeric values as REAL; che
 */
 
 -- Roles Table
-CREATE TABLE roles (
+CREATE TABLE IF NOT EXISTS roles   (
     name TEXT PRIMARY KEY
 );
 
@@ -27,7 +27,7 @@ INSERT INTO roles (name) VALUES
     ('Support');
 
 -- Users Table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     username TEXT PRIMARY KEY,
     password_hash TEXT NOT NULL,
     role_id TEXT NOT NULL,
@@ -38,14 +38,14 @@ CREATE TABLE users (
 );
 
 -- Profiles Table
-CREATE TABLE profiles (
+CREATE TABLE IF NOT EXISTS profiles  (
     user_id TEXT PRIMARY KEY,
     bio TEXT,
     FOREIGN KEY (user_id) REFERENCES users(username)
 );
 
 -- Clients Table
-CREATE TABLE clients (
+CREATE TABLE IF NOT EXISTS clients  (
     email TEXT PRIMARY KEY,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
@@ -60,7 +60,7 @@ CREATE TABLE clients (
 );
 
 -- Contracts Table
-CREATE TABLE contracts (
+CREATE TABLE IF NOT EXISTS contracts  (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     client_id TEXT NOT NULL,
     sales_contact_id TEXT,
@@ -76,7 +76,7 @@ CREATE TABLE contracts (
 );
 
 -- Events Table
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events  (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     contract_id INTEGER NOT NULL,
     support_contact_id TEXT,
@@ -92,7 +92,7 @@ CREATE TABLE events (
 );
 
 -- Permissions Table
-CREATE TABLE permissions (
+CREATE TABLE IF NOT EXISTS permissions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     role_id TEXT NOT NULL,
     entity TEXT NOT NULL,

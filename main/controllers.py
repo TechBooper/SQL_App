@@ -1,5 +1,5 @@
 import logging
-from models import User, Client, Contract, Event, Permission, Role, Database
+from .models import User, Client, Contract, Event, Permission, Role, Database
 import sqlite3
 import bcrypt
 
@@ -27,13 +27,26 @@ def has_permission(username, entity, action, resource_owner_username=None):
         logging.warning(f"User '{username}' not found.")
         return False
 
-    # user.role_id is actually the role's name now
     role = Role.get_by_name(user.role_id)
     if not role:
         logging.error(f"Role '{user.role_id}' not found for user '{username}'.")
         return False
 
-    # Check if the user has the permission for the action
+    # Debug logging
+    logging.debug(f"""
+        Permission check:
+        Username: {username}
+        Role: {role.name}
+        Entity: {entity}
+        Action: {action}
+        Resource Owner: {resource_owner_username}
+    """)
+
+    # Management role should have all permissions
+    if role.name == "Management":
+        logging.debug(f"Management role detected for user {username}")
+        return True
+
     permissions = Permission.get_permissions_by_role(user.role_id)
     has_perm = any(
         perm.entity == entity and perm.action == action for perm in permissions
@@ -47,10 +60,8 @@ def has_permission(username, entity, action, resource_owner_username=None):
 
     # Ownership checks for certain actions
     if action in ["update", "delete"] and entity in ["client", "contract", "event"]:
-        if role.name == "Management":
-            return True  # Management can modify any resource
         if resource_owner_username is not None:
-            return username == resource_owner_username  # Only owner can modify
+            return username == resource_owner_username
         return False  # No ownership provided
 
     # Commercial users can only create events for their own clients
@@ -68,13 +79,18 @@ def create_client(username, first_name, last_name, email, phone, company_name):
     if not all([first_name, last_name, email, phone, company_name]):
         return "All client fields are required."
 
+    # Get the user ID from the username
+    user = User.get_by_username(username)
+    if not user:
+        return "Invalid user."
+
     result = Client.create(
         first_name=first_name,
         last_name=last_name,
         email=email,
         phone=phone,
         company_name=company_name,
-        sales_contact_id=username,
+        sales_contact_id=username
     )
 
     if isinstance(result, str):
@@ -272,40 +288,60 @@ def create_event(username, contract_id, event_date_start, event_date_end, locati
 
 def update_event(username, event_id, **kwargs):
     """Update an existing event."""
+    # First check if event exists
     event = Event.get_by_id(event_id)
     if not event:
         logging.warning(f"Event ID {event_id} not found.")
         return "Event not found."
 
-    # Need to get contract and client to determine owner
-    contract = Contract.get_by_id(event.contract_id)
-    if not contract:
-        logging.warning(f"Contract ID {event.contract_id} not found for event {event_id}.")
-        return "Contract not found."
+    # Get ownership chain with better error handling
+    try:
+        contract = Contract.get_by_id(event.contract_id)
+        if not contract:
+            logging.warning(f"Contract ID {event.contract_id} not found for event {event_id}.")
+            return "Contract not found."
 
-    client = Client.get_by_email(contract.client_id)
-    if not client:
-        logging.warning(f"Client email '{contract.client_id}' not found.")
-        return "Client not found."
+        client = Client.get_by_email(contract.client_id)
+        if not client:
+            logging.warning(f"Client email '{contract.client_id}' not found.")
+            return "Client not found."
 
-    resource_owner_username = client.sales_contact_id
+        resource_owner_username = client.sales_contact_id
+        
+        # Add debug logging
+        logging.debug(f"""
+            Update event check:
+            Username: {username}
+            Event ID: {event_id}
+            Resource Owner: {resource_owner_username}
+            Contract ID: {contract.id}
+            Client Email: {client.email}
+        """)
 
-    if not has_permission(username, "event", "update", resource_owner_username=resource_owner_username):
-        return "Permission denied."
+        # Check permissions
+        if not has_permission(username, "event", "update", resource_owner_username=resource_owner_username):
+            return "Permission denied."
 
-    for key, value in kwargs.items():
-        setattr(event, key, value)
+        # Update event fields
+        for key, value in kwargs.items():
+            if hasattr(event, key):  # Only update valid attributes
+                setattr(event, key, value)
+            else:
+                logging.warning(f"Invalid field '{key}' ignored for event update")
 
-    result = event.update()
-    if result is True:
-        logging.info(
-            f"Event ID {event_id} updated successfully by user '{username}'."
-        )
-        return f"Event ID {event_id} updated successfully."
-    elif isinstance(result, str):
-        return result
-    else:
-        logging.error(f"Error updating event ID {event_id} by user '{username}'.")
+        result = event.update()
+        if result is True:
+            logging.info(f"Event ID {event_id} updated successfully by user '{username}'.")
+            return f"Event ID {event_id} updated successfully."
+        elif isinstance(result, str):
+            logging.error(f"Update failed with message: {result}")
+            return result
+        else:
+            logging.error(f"Error updating event ID {event_id} by user '{username}'.")
+            return "Error updating event."
+
+    except Exception as e:
+        logging.error(f"Unexpected error updating event: {str(e)}")
         return "Error updating event."
 
 
@@ -385,9 +421,7 @@ def create_user(admin_username, username, password, role_name, email):
 
 def update_user(admin_username, username, new_username=None, password=None, role_name=None, email=None):
     """Update an existing user's information."""
-    if not has_permission(admin_username, "user", "update"):
-        return "Permission denied."
-
+    # First check if user exists
     user = User.get_by_username(username)
     if not user:
         logging.warning(
@@ -395,10 +429,13 @@ def update_user(admin_username, username, new_username=None, password=None, role
         )
         return "User not found."
 
+    # Then check permissions
+    if not has_permission(admin_username, "user", "update"):
+        return "Permission denied."
+
     if new_username:
         user.username = new_username
     if password:
-        # Hash the new password
         user.password_hash = bcrypt.hashpw(
             password.encode("utf-8"), bcrypt.gensalt()
         ).decode("utf-8")
@@ -419,18 +456,19 @@ def update_user(admin_username, username, new_username=None, password=None, role
         )
         return "Error updating user."
 
-
 def delete_user(admin_username, username):
     """Delete a user."""
-    if not has_permission(admin_username, "user", "delete"):
-        return "Permission denied."
-
+    # First check if user exists
     user = User.get_by_username(username)
     if not user:
         logging.warning(
             f"User '{username}' not found for deletion by admin user '{admin_username}'."
         )
         return "User not found."
+
+    # Then check permissions
+    if not has_permission(admin_username, "user", "delete"):
+        return "Permission denied."
 
     if user.delete():
         logging.info(f"User '{username}' deleted by admin user '{admin_username}'.")

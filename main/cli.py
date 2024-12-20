@@ -4,8 +4,11 @@ import logging
 import getpass
 import os
 import sentry_sdk
-from auth import authenticate, has_permission
-from controllers import (
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+from .auth import authenticate, has_permission
+from .controllers import (
     create_user,
     update_user,
     delete_user,
@@ -27,9 +30,8 @@ from controllers import (
     filter_events_by_support_user,
     get_all_users,
 )
-from models import User
-from configs import sentry_setup
-from views import (
+from .models import User
+from .views import (
     display_welcome_message,
     display_login_prompt,
     display_main_menu,
@@ -42,7 +44,11 @@ from views import (
     confirm_action,
     display_users,
 )
-import sentry_sdk
+
+from .configs import sentry_setup
+from .database import create_connection
+
+
 
 logging.basicConfig(
     filename="cli.log",
@@ -51,7 +57,7 @@ logging.basicConfig(
 )
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__)))
-DATABASE_FOLDER = os.path.join(BASE_DIR, "database")
+DATABASE_FOLDER = os.path.join(BASE_DIR, "db_folder")
 DATABASE_URL = os.path.join(DATABASE_FOLDER, "app.db")
 
 
@@ -68,11 +74,12 @@ def display_sub_menu(title, options):
 
 
 def main():
-    if not os.path.exists(DATABASE_URL):
+    conn = create_connection()
+    if conn is None:
         print(
-            "Database not found. Please initialize the database by running 'python database.py' before proceeding."
+            "Database connection failed. Please ensure the database is initialized."
         )
-        sys.exit(1)
+        return 1
 
     session = {}
     display_welcome_message()
@@ -81,7 +88,7 @@ def main():
         user_info = authenticate(username, password)
         if user_info:
             session["username"] = user_info["username"]
-            session["role"] = user_info["role_id"]  # role_id is actually role name
+            session["role"] = user_info["role_id"]
             print(f"\nLogged in as {session['username']} with role {session['role']}.\n")
             interactive_session(session)
             break
@@ -309,7 +316,7 @@ def manage_clients(session):
                 if selection == "View Clients":
                     handle_view_clients(session)
                 elif selection == "Create Client":
-                    handle_create_client(session)
+                    handle_create_client(session)  # This one is already correct
                 elif selection == "Update Client":
                     handle_update_client(session)
                 elif selection == "Delete Client":
@@ -357,12 +364,12 @@ def handle_create_client(session):
     phone = prompt_input("Enter phone number: ")
     company_name = prompt_input("Enter company name: ")
     result = create_client(
-        user_id=session["username"],
+        username=session["username"],
         first_name=first_name,
         last_name=last_name,
         email=email,
         phone=phone,
-        company_name=company_name,
+        company_name=company_name
     )
     print(f"{result}\n")
 
@@ -376,7 +383,7 @@ def handle_update_client(session):
     phone = prompt_input("Enter new phone number: ")
     company_name = prompt_input("Enter new company name: ")
     result = update_client(
-        user_id=session["username"],
+        username=session["username"],
         client_id=client_email,
         first_name=first_name,
         last_name=last_name,
@@ -392,7 +399,7 @@ def handle_delete_client(session):
     client_email = prompt_input("Enter client email to delete: ")
     confirm = confirm_action("delete this client")
     if confirm:
-        result = delete_client(user_id=session["username"], client_id=client_email)
+        result = delete_client(username=session["username"], client_id=client_email)
         print(f"{result}\n")
     else:
         print("Deletion cancelled.\n")
@@ -475,7 +482,7 @@ def handle_create_contract(session):
 
         if status:
             result = create_contract(
-                user_id=session["username"],
+                username=session["username"],
                 client_id=client_email,
                 total_amount=total_amount,
                 amount_remaining=amount_remaining,
@@ -509,7 +516,7 @@ def handle_update_contract(session):
 
         if status:
             result = update_contract(
-                user_id=session["username"],
+                username=session["username"],
                 contract_id=contract_id,
                 total_amount=total_amount,
                 amount_remaining=amount_remaining,
@@ -530,7 +537,7 @@ def handle_delete_contract(session):
         try:
             contract_id = int(contract_id_input)
             result = delete_contract(
-                user_id=session["username"], contract_id=contract_id
+                username=session["username"], contract_id=contract_id
             )
             print(f"{result}\n")
         except ValueError:
@@ -645,7 +652,7 @@ def handle_create_event(session):
         contract_id = int(contract_id_input)
         attendees = int(attendees_input)
         result = create_event(
-            user_id=session["username"],
+            username=session["username"],
             contract_id=contract_id,
             event_date_start=event_date_start,
             event_date_end=event_date_end,
@@ -670,7 +677,7 @@ def handle_update_event(session):
         event_id = int(event_id_input)
         attendees = int(attendees_input)
         result = update_event(
-            user_id=session["username"],
+            username=session["username"],
             event_id=event_id,
             event_date_start=event_date_start,
             event_date_end=event_date_end,
@@ -690,7 +697,7 @@ def handle_delete_event(session):
     if confirm:
         try:
             event_id = int(event_id_input)
-            result = delete_event(user_id=session["username"], event_id=event_id)
+            result = delete_event(username=session["username"], event_id=event_id)
             print(f"{result}\n")
         except ValueError:
             print("Invalid event ID.\n")
@@ -705,7 +712,7 @@ def handle_assign_support(session):
     try:
         event_id = int(event_id_input)
         result = assign_support_to_event(
-            user_id=session["username"],
+            username=session["username"],
             event_id=event_id,
             support_user_id=support_user_username,
         )

@@ -25,7 +25,7 @@ This is a Command-Line Interface (CLI) application for managing customer relatio
 `python -m venv venv`
 `source venv/bin/activate`
 
-Windows Users have to use this command in the folder's directory: `venv\Scripts\activate`
+Windows Users have to use this command in the folder's (SQLApp) directory: `venv\Scripts\activate`
 
 2. Install Dependencies
 
@@ -35,13 +35,13 @@ Windows Users have to use this command in the folder's directory: `venv\Scripts\
 
 Run the database.py script to create and initialize the SQLite database by inputting:
 
-`python database.py`
+`python -m main.database`
 
 # Usage
 
 Run the CLI application using:
 
-`python cli.py`
+`python -m main.cli`
 
 # Available Actions
 
@@ -95,3 +95,5 @@ Permission Denied: If you attempt to access a feature you don't have permissions
 Logging Out
 
 To log out of the application, select the 'Logout' option from the main menu.
+
+

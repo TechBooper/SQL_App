@@ -1,0 +1,18 @@
+Ce diagramme illustre une base de données avec plusieurs éléments :
+
+- Les utilisateurs, leurs rôles et leurs permissions.
+- Les liens entre ces permissions et les clients, contrats, et événements (qui peut faire quoi).
+ 
+Chaque utilisateur a un rôle (par exemple, Management (Gestion) ou Support) qui détermine ce qu’il peut faire :
+
+Gestion : peut créer, modifier et supprimer les contrats et les événements.
+Support : peut modifier les contrats et les événements, mais pas les créer ni les supprimer, ni gérer les clients.
+Commercial : gère les clients et leurs contrats, mais pas l’administration générale.
+
+Les permissions sont séparées, permettant par exemple d’implémenter un changement de rôle directement depuis la ligne de commande.
+
+
+
+
+
+

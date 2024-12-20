@@ -1,12 +1,20 @@
 import unittest
-from unittest.mock import patch, MagicMock
-from auth import create_user, authenticate, get_user_role, hash_password, has_permission
 import sqlite3
+from unittest.mock import patch, MagicMock
+
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+from main.auth import create_user, hash_password
+
+
 
 
 class TestAuthModule(unittest.TestCase):
-    @patch("auth.Role.get_by_name")
-    @patch("auth.User.create")
+    @patch("main.auth.Role.get_by_name")
+    @patch("main.auth.User.create")
     def test_create_user_success(self, mock_user_create, mock_role_get_by_name):
         """
         Test creating a user successfully.
@@ -31,8 +39,8 @@ class TestAuthModule(unittest.TestCase):
             email="test@test.com"
         )
 
-    @patch("auth.Role.get_by_name")
-    @patch("auth.User.create")
+    @patch("main.auth.Role.get_by_name")
+    @patch("main.auth.User.create")
     def test_create_user_invalid_role(self, mock_user_create, mock_role_get_by_name):
         """
         Test creating a user with an invalid role.
@@ -48,8 +56,8 @@ class TestAuthModule(unittest.TestCase):
         mock_role_get_by_name.assert_called_once_with("InvalidRole")
         mock_user_create.assert_not_called()
 
-    @patch("auth.Role.get_by_name")
-    @patch("auth.User.create")
+    @patch("main.auth.Role.get_by_name")
+    @patch("main.auth.User.create")
     def test_create_user_duplicate_email(self, mock_user_create, mock_role_get_by_name):
         """
         Test creating a user with a duplicate email.

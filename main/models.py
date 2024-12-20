@@ -15,16 +15,20 @@ logging.basicConfig(
 )
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-DATABASE_FOLDER = os.path.join(BASE_DIR, "database")
+DATABASE_FOLDER = os.path.join(BASE_DIR, "db_folder")
 DATABASE_URL = os.path.join(DATABASE_FOLDER, "app.db")
 
 
 class Database:
     @staticmethod
     def connect():
-        conn = sqlite3.connect(DATABASE_URL)
-        conn.row_factory = sqlite3.Row
-        return conn
+        try:
+            conn = sqlite3.connect(DATABASE_URL)
+            conn.row_factory = sqlite3.Row
+            return conn
+        except sqlite3.Error as e:
+            logging.error(f"Error connecting to database: {e}")
+            raise
 
 
 class User:
@@ -65,6 +69,7 @@ class User:
 
     @staticmethod
     def get_by_username(username):
+        conn = None
         try:
             conn = Database.connect()
             cursor = conn.cursor()
@@ -77,7 +82,8 @@ class User:
             logging.error(f"Database error in User.get_by_username: {e}")
             return None
         finally:
-            conn.close()
+            if conn:
+                conn.close()
 
     @staticmethod
     def get_all_users():
@@ -147,6 +153,11 @@ class Role:
     def __init__(self, **kwargs):
         self.name = kwargs.get("name")
         logging.debug(f"Created Role instance: {self.__dict__}")
+
+    
+    def is_management_role(self):
+        """Check if the role is 'Management'."""
+        return self.name == "Management"
 
     @staticmethod
     def get_by_name(name):
@@ -279,9 +290,11 @@ class Contract:
     @staticmethod
     def create(client_id, sales_contact_id, total_amount, amount_remaining, status):
         try:
+            if status not in ('Signed', 'Not Signed'):
+                return "CHECK constraint failed: status IN ('Signed', 'Not Signed')"
+                
             with Database.connect() as conn:
                 cursor = conn.cursor()
-                # date_created defaults to date('now'), so no need to insert explicitly
                 cursor.execute(
                     """INSERT INTO contracts (client_id, sales_contact_id, total_amount, amount_remaining, status)
                     VALUES (?, ?, ?, ?, ?)""",
@@ -411,29 +424,37 @@ class Event:
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
-                cursor.execute(
-                    """UPDATE events SET contract_id = ?, support_contact_id = ?, event_date_start = ?, event_date_end = ?, location = ?, attendees = ?, notes = ?, updated_at = datetime('now')
-                    WHERE id = ?""",
-                    (
-                        self.contract_id,
-                        self.support_contact_id,
-                        self.event_date_start,
-                        self.event_date_end,
-                        self.location,
-                        self.attendees,
-                        self.notes,
-                        self.id,
-                    ),
-                )
+                cursor.execute("""
+                    UPDATE events SET 
+                        contract_id = ?,
+                        support_contact_id = ?,
+                        event_date_start = ?,
+                        event_date_end = ?,
+                        location = ?,
+                        attendees = ?,
+                        notes = ?,
+                        updated_at = datetime('now')
+                    WHERE id = ?
+                """, (
+                    self.contract_id,
+                    self.support_contact_id,
+                    self.event_date_start,
+                    self.event_date_end,
+                    self.location,
+                    self.attendees,
+                    self.notes,
+                    self.id
+                ))
                 conn.commit()
-                logging.info(f"Event ID {self.id} updated.")
-                return True
-        except sqlite3.IntegrityError:
-            logging.warning(f"Duplicate event attempted in Event.update for ID {self.id}.")
-            return "Another event with these details already exists."
+
+                if cursor.rowcount > 0:
+                    logging.info(f"Event ID {self.id} updated successfully.")
+                    return "updated successfully"
+                return "Error updating event."
         except sqlite3.Error as e:
             logging.error(f"Database error in Event.update: {e}")
-            return False
+            return "Error updating event."
+
 
     def delete(self):
         try:
@@ -475,12 +496,17 @@ class Permission:
         try:
             conn = Database.connect()
             cursor = conn.cursor()
-            cursor.execute(
-                "SELECT 1 FROM permissions WHERE role_id = ? AND entity = ? AND action = ?",
-                (role_name, entity, action),
-            )
+
+            # Check for specific entity-action permission
+            cursor.execute("""
+                SELECT 1 FROM permissions
+                WHERE role_id = ?
+                AND (entity = ? OR entity = '*')
+                AND (action = ? OR action = '*')
+            """, (role_name, entity, action))
             result = cursor.fetchone()
-            return result is not None
+
+            return bool(result)
         except sqlite3.Error as e:
             logging.error(f"Database error in Permission.has_permission: {e}")
             return False

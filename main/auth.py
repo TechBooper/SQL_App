@@ -2,11 +2,10 @@ import bcrypt
 import logging
 import os
 import sqlite3
-from models import User, Role, Permission
-import sqlite3
+from .models import User, Role, Permission
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-DATABASE_FOLDER = os.path.join(BASE_DIR, "database")
+DATABASE_FOLDER = os.path.join(BASE_DIR, "db_folder")
 DATABASE_URL = os.path.join(DATABASE_FOLDER, "app.db")
 
 if not os.path.isabs(DATABASE_URL):
