@@ -7,8 +7,8 @@ import sentry_sdk
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from .auth import authenticate, has_permission
-from .controllers import (
+from main.auth import authenticate, has_permission
+from main.controllers import (
     create_user,
     update_user,
     delete_user,
@@ -30,8 +30,8 @@ from .controllers import (
     filter_events_by_support_user,
     get_all_users,
 )
-from .models import User
-from .views import (
+from main.models import User
+from main.views import (
     display_welcome_message,
     display_login_prompt,
     display_main_menu,
@@ -45,8 +45,8 @@ from .views import (
     display_users,
 )
 
-from .configs import sentry_setup
-from .database import create_connection
+from main.configs import sentry_setup
+from main.database import create_connection
 
 
 
