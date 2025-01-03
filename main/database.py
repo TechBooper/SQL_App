@@ -21,6 +21,8 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
+
+
 def is_password_strong(password):
     if len(password) < 8:
         return False

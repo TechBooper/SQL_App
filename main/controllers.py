@@ -1,5 +1,5 @@
 import logging
-from .models import User, Client, Contract, Event, Permission, Role, Database
+from main.models import User, Client, Contract, Event, Permission, Role, Database
 import sqlite3
 import bcrypt
 
@@ -8,6 +8,8 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
+
+
 
 
 def has_permission(username, entity, action, resource_owner_username=None):

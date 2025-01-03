@@ -10,8 +10,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from main.auth import create_user, hash_password
 
 
-
-
 class TestAuthModule(unittest.TestCase):
     @patch("main.auth.Role.get_by_name")
     @patch("main.auth.User.create")

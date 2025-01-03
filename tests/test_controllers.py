@@ -23,8 +23,6 @@ from main.controllers import (
     filter_events_by_support_user,
     assign_support_to_event
 )
-from main.models import User, Client, Contract, Event, Role, Database
-
 
 class TestControllers(unittest.TestCase):
     def setUp(self):
