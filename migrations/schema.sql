@@ -18,6 +18,7 @@ We will rely on REAL for amounts since SQLite stores numeric values as REAL; che
 
 -- Roles Table
 CREATE TABLE IF NOT EXISTS roles   (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT PRIMARY KEY
 );
 
