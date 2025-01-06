@@ -22,10 +22,19 @@ This is a Command-Line Interface (CLI) application for managing customer relatio
 
 2. Set up virtual env
 
+- macOS/Linux
+
 `python -m venv venv`
 `source venv/bin/activate`
 
+<<<<<<< Updated upstream:documentation/README.md
 Windows Users have to use this command in the folder's directory: `venv\Scripts\activate`
+=======
+- Windows
+
+`python -m venv venv`
+`venv\Scripts\activate`
+>>>>>>> Stashed changes:README.md
 
 2. Install Dependencies
 
@@ -42,6 +51,13 @@ Run the database.py script to create and initialize the SQLite database by input
 Run the CLI application using:
 
 `python cli.py`
+
+# Notes
+
+- Make sure you have a compatible Python version (e.g., Python 3.8+).
+- If you get a “Database not found” error, re-check that you ran the database initialization step (Step 4) successfully.
+- Windows users should run the commands from within the project directory (where venv is located).
+- To log out once inside the CLI, select the 'Logout' option from the main menu.
 
 # Available Actions
 
