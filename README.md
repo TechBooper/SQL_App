@@ -46,7 +46,7 @@ Run the database.py script to create and initialize the SQLite database by input
 
 Run the CLI application using:
 
-`python -m main.cli`
+`python cli.py`
 
 # Notes
 

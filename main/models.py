@@ -42,7 +42,6 @@ class User:
 
     @staticmethod
     def create(username, password, role_id, email):
-        # Local import to avoid circular import
         from main.repository import UserRepository
 
         return UserRepository.create_user(username, password, role_id, email)
