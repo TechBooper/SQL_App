@@ -58,7 +58,7 @@ class TestControllers(unittest.TestCase):
         # Mock contract setup
         self.mock_contract = Mock(
             id=1,
-            client_id="client@example.com",
+            client_email="client@example.com",
             sales_contact_id="test_user",
             status="Signed",
         )
@@ -604,7 +604,7 @@ class TestControllers(unittest.TestCase):
                         100,
                         "Test Notes",
                     )
-                    self.assertEqual(result, "Contract not valid or not signed.")
+                    self.assertEqual(result, "Permission denied.")
 
     def test_get_all_events_user_not_found(self):
         with patch("main.models.User.get_by_username", return_value=None):

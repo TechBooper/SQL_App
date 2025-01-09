@@ -190,7 +190,7 @@ class TestCLI(unittest.TestCase):
             # Adjusted user_id to username per previous changes
             mock_create.assert_called_once_with(
                 username="test_user",
-                client_id="client@test.com",
+                client_email="client@test.com",
                 total_amount=10000.0,
                 amount_remaining=5000.0,
                 status="Signed",

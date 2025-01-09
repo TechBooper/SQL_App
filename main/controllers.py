@@ -264,30 +264,29 @@ def delete_contract(username, contract_id):
         return "Error deleting contract."
 
 
-def create_event(
-    username, contract_id, event_date_start, event_date_end, location, attendees, notes
-):
-    """Create a new event associated with a contract."""
-    contract = Contract.get_by_id(contract_id)
-    if not contract or contract.status != "Signed":
-        logging.warning(f"Contract ID {contract_id} is not valid or not signed.")
-        return "Contract not valid or not signed."
+def create_event(username, contract_id, event_date_start, event_date_end, location, attendees, notes):
+    """
+    Create a new event associated with a contract.
+    """
 
-    client = Client.get_by_email(contract.client_id)
-    if not client:
-        logging.warning(f"Client associated with contract ID {contract_id} not found.")
-        return "Client not found."
-
-    resource_owner_username = client.sales_contact_id
-
-    if not has_permission(
-        username, "event", "create", resource_owner_username=resource_owner_username
-    ):
+    # 1) Check permission first
+    if not has_permission(username, "event", "create"):
         return "Permission denied."
 
+    # 2) Then get/check the contract
+    contract = Contract.get_by_id(contract_id)
+    if not contract or contract.status != "Signed":
+        return "Contract not valid or not signed."
+
+    # 3) Then check the client or resource_owner_username if needed.
+    client = Client.get_by_email(contract.client_id)
+    if not client:
+        return "Client not found."
+
+    # 4) Finally create the event
     result = Event.create(
         contract_id=contract_id,
-        support_contact_id=None,  # Initially, no support contact assigned
+        support_contact_id=None,
         event_date_start=event_date_start,
         event_date_end=event_date_end,
         location=location,
@@ -298,15 +297,10 @@ def create_event(
     if isinstance(result, str):
         return result
     elif result:
-        logging.info(
-            f"Event created successfully for contract ID {contract_id} by user '{username}'."
-        )
         return "Event created successfully."
     else:
-        logging.error(
-            f"Error creating event for contract ID {contract_id} by user '{username}'."
-        )
         return "Error creating event."
+
 
 
 def update_event(username, event_id, **kwargs):

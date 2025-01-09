@@ -5,8 +5,6 @@ import sqlite3
 import bcrypt
 from datetime import datetime
 
-# Import the same Database helper and models from your existing file
-# Adjust this import statement to point to the location of your classes.
 from .models import Database, User, Role, Client, Contract, Event, Permission
 
 logging.basicConfig(

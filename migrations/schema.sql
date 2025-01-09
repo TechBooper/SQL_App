@@ -1,12 +1,5 @@
 /*
-This database schema sets up a foundation for Epic Events CRM, similar to the previous design, but simplified to avoid any SQLite-specific pitfalls. The logic and constraints remain effectively the same, but we’ll use standard SQLite-compatible syntax.
-
-Changes from previous attempts:
-- No "IF NOT EXISTS" for triggers.
-- No "SET" keyword in triggers.
-- Using standard SQLite-compatible data types and syntax.
-- Decimals will be stored as REAL because SQLite doesn’t have a DECIMAL type; checks remain to ensure valid values.
-- Ensuring all columns and constraints are compatible with SQLite.
+This database schema sets up a foundation for Epic Events CRM. The logic and constraints remain effectively the same, but we’ll use standard SQLite-compatible syntax, not SQL syntax.
 
 This schema uses:
 - Roles, Users, Clients, Contracts, Events, Permissions tables.
