@@ -4,6 +4,7 @@ from unittest.mock import patch, MagicMock
 
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
@@ -34,7 +35,7 @@ class TestAuthModule(unittest.TestCase):
             username="test_user",
             password_hash=unittest.mock.ANY,  # Since the password is hashed
             role_id="Management",
-            email="test@test.com"
+            email="test@test.com",
         )
 
     @patch("main.auth.Role.get_by_name")
@@ -64,10 +65,14 @@ class TestAuthModule(unittest.TestCase):
         mock_role_get_by_name.return_value = MagicMock()
 
         # Simulate IntegrityError for duplicate email
-        mock_user_create.side_effect = sqlite3.IntegrityError("UNIQUE constraint failed: users.email")
+        mock_user_create.side_effect = sqlite3.IntegrityError(
+            "UNIQUE constraint failed: users.email"
+        )
 
         # Call function
-        result = create_user("test_user", "password", "Management", "duplicate@test.com")
+        result = create_user(
+            "test_user", "password", "Management", "duplicate@test.com"
+        )
 
         # Assertions
         self.assertIsNone(result)
@@ -75,7 +80,7 @@ class TestAuthModule(unittest.TestCase):
             username="test_user",
             password_hash=unittest.mock.ANY,
             role_id="Management",
-            email="duplicate@test.com"
+            email="duplicate@test.com",
         )
 
     def test_hash_password(self):

@@ -44,28 +44,34 @@ class User:
     def create(username, password, role_id, email):
         # Local import to avoid circular import
         from main.repository import UserRepository
+
         return UserRepository.create_user(username, password, role_id, email)
 
     @staticmethod
     def get_by_username(username):
         from main.repository import UserRepository
+
         return UserRepository.get_user_by_username(username)
 
     @staticmethod
     def get_all_users():
         from main.repository import UserRepository
+
         return UserRepository.get_all_users()
 
     def update(self, password=None):
         from main.repository import UserRepository
+
         return UserRepository.update_user(self, password)
 
     def delete(self):
         from main.repository import UserRepository
+
         return UserRepository.delete_user(self)
 
     def verify_password(self, password):
         from main.repository import UserRepository
+
         return UserRepository.verify_user_password(self, password)
 
 
@@ -81,6 +87,7 @@ class Role:
     @staticmethod
     def get_by_name(name):
         from main.repository import RoleRepository
+
         return RoleRepository.get_role_by_name(name)
 
 
@@ -100,6 +107,7 @@ class Client:
     @staticmethod
     def create(first_name, last_name, email, phone, company_name, sales_contact_id):
         from main.repository import ClientRepository
+
         return ClientRepository.create_client(
             first_name, last_name, email, phone, company_name, sales_contact_id
         )
@@ -107,14 +115,17 @@ class Client:
     @staticmethod
     def get_by_email(email):
         from main.repository import ClientRepository
+
         return ClientRepository.get_client_by_email(email)
 
     def update(self):
         from main.repository import ClientRepository
+
         return ClientRepository.update_client(self)
 
     def delete(self):
         from main.repository import ClientRepository
+
         return ClientRepository.delete_client(self)
 
 
@@ -134,6 +145,7 @@ class Contract:
     @staticmethod
     def create(client_id, sales_contact_id, total_amount, amount_remaining, status):
         from main.repository import ContractRepository
+
         return ContractRepository.create_contract(
             client_id, sales_contact_id, total_amount, amount_remaining, status
         )
@@ -141,14 +153,17 @@ class Contract:
     @staticmethod
     def get_by_id(contract_id):
         from main.repository import ContractRepository
+
         return ContractRepository.get_contract_by_id(contract_id)
 
     def update(self):
         from main.repository import ContractRepository
+
         return ContractRepository.update_contract(self)
 
     def delete(self):
         from main.repository import ContractRepository
+
         return ContractRepository.delete_contract(self)
 
 
@@ -167,8 +182,17 @@ class Event:
         logging.debug(f"Created Event instance: {self.__dict__}")
 
     @staticmethod
-    def create(contract_id, support_contact_id, event_date_start, event_date_end, location, attendees, notes):
+    def create(
+        contract_id,
+        support_contact_id,
+        event_date_start,
+        event_date_end,
+        location,
+        attendees,
+        notes,
+    ):
         from main.repository import EventRepository
+
         return EventRepository.create_event(
             contract_id,
             support_contact_id,
@@ -182,14 +206,17 @@ class Event:
     @staticmethod
     def get_by_id(event_id):
         from main.repository import EventRepository
+
         return EventRepository.get_event_by_id(event_id)
 
     def update(self):
         from main.repository import EventRepository
+
         return EventRepository.update_event(self)
 
     def delete(self):
         from main.repository import EventRepository
+
         return EventRepository.delete_event(self)
 
 
@@ -204,9 +231,11 @@ class Permission:
     @staticmethod
     def get_permissions_by_role(role_name):
         from main.repository import PermissionRepository
+
         return PermissionRepository.get_permissions_by_role(role_name)
 
     @staticmethod
     def has_permission(role_name, entity, action):
         from main.repository import PermissionRepository
+
         return PermissionRepository.has_permission(role_name, entity, action)

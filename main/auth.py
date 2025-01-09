@@ -5,7 +5,6 @@ import sqlite3
 from main.models import User, Role, Permission
 
 
-
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DATABASE_FOLDER = os.path.join(BASE_DIR, "db_folder")
 DATABASE_URL = os.path.join(DATABASE_FOLDER, "app.db")
@@ -33,7 +32,9 @@ def authenticate(username, password):
                 logging.info("User %s authenticated successfully.", username)
                 return {"username": user.username, "role_id": user.role_id}
             else:
-                logging.warning("Failed authentication attempt for username: %s.", username)
+                logging.warning(
+                    "Failed authentication attempt for username: %s.", username
+                )
                 return None
         else:
             logging.warning("User %s not found.", username)
@@ -82,7 +83,7 @@ def create_user(username, password, role_id, email):
             username=username,
             password_hash=hashed_password,
             role_id=role_id,
-            email=email
+            email=email,
         )
         logging.info("User %s created successfully.", username)
         return user

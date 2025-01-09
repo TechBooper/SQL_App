@@ -1,6 +1,7 @@
 import unittest
 from main.models import User, Client, Contract, Event, Role, Permission, Database
 
+
 class TestModels(unittest.TestCase):
     def setUp(self):
         # Setup test database connection
@@ -8,7 +9,8 @@ class TestModels(unittest.TestCase):
         self.cursor = self.conn.cursor()
 
         # Create tables if they do not exist
-        self.cursor.executescript("""
+        self.cursor.executescript(
+            """
             CREATE TABLE IF NOT EXISTS users (
                 username TEXT PRIMARY KEY,
                 password_hash TEXT NOT NULL,
@@ -55,28 +57,33 @@ class TestModels(unittest.TestCase):
                 entity TEXT NOT NULL,
                 action TEXT NOT NULL
             );
-        """)
+        """
+        )
 
         # Clear all tables before each test
-        self.cursor.executescript("""
+        self.cursor.executescript(
+            """
             DELETE FROM events;
             DELETE FROM contracts;
             DELETE FROM clients;
             DELETE FROM users;
             DELETE FROM permissions;
-        """)
+        """
+        )
         self.conn.commit()
 
     def tearDown(self):
         # Clear all tables after each test
         try:
-            self.cursor.executescript("""
+            self.cursor.executescript(
+                """
                 DELETE FROM events;
                 DELETE FROM contracts;
                 DELETE FROM clients;
                 DELETE FROM users;
                 DELETE FROM permissions;
-            """)
+            """
+            )
             self.conn.commit()
         finally:
             self.cursor.close()
@@ -88,7 +95,7 @@ class TestModels(unittest.TestCase):
             username="testuser",
             password="password123",
             role_id="Management",
-            email="test@example.com"
+            email="test@example.com",
         )
         self.assertIsInstance(result, User)
         self.assertEqual(result.username, "testuser")
@@ -98,13 +105,13 @@ class TestModels(unittest.TestCase):
             username="testuser1",
             password="password123",
             role_id="Management",
-            email="duplicate@example.com"
+            email="duplicate@example.com",
         )
         result = User.create(
             username="testuser2",
             password="password456",
             role_id="Support",
-            email="duplicate@example.com"
+            email="duplicate@example.com",
         )
         self.assertEqual(result, "A user with this email already exists.")
 
@@ -113,7 +120,7 @@ class TestModels(unittest.TestCase):
             username="testuser",
             password="password123",
             role_id="Management",
-            email="test@example.com"
+            email="test@example.com",
         )
         user.email = "updated@example.com"
         result = user.update()
@@ -126,7 +133,7 @@ class TestModels(unittest.TestCase):
             username="testuser",
             password="password123",
             role_id="Management",
-            email="test@example.com"
+            email="test@example.com",
         )
         result = user.delete()
         self.assertTrue(result)
@@ -141,12 +148,10 @@ class TestModels(unittest.TestCase):
             email="john@example.com",
             phone="1234567890",
             company_name="TestCorp",
-            sales_contact_id="testuser"
+            sales_contact_id="testuser",
         )
         self.assertIsInstance(result, Client)
         self.assertEqual(result.email, "john@example.com")
-
-
 
     def test_delete_client(self):
         client = Client.create(
@@ -155,7 +160,7 @@ class TestModels(unittest.TestCase):
             email="john@example.com",
             phone="1234567890",
             company_name="TestCorp",
-            sales_contact_id="testuser"
+            sales_contact_id="testuser",
         )
         result = client.delete()
         self.assertTrue(result)
@@ -169,7 +174,7 @@ class TestModels(unittest.TestCase):
             sales_contact_id="salesuser",
             total_amount=1000.0,
             amount_remaining=500.0,
-            status="Signed"
+            status="Signed",
         )
         self.assertIsInstance(result, Contract)
         self.assertEqual(result.total_amount, 1000.0)
@@ -180,7 +185,7 @@ class TestModels(unittest.TestCase):
             sales_contact_id="salesuser",
             total_amount=1000.0,
             amount_remaining=500.0,
-            status="Signed"
+            status="Signed",
         )
         contract.amount_remaining = 200.0
         result = contract.update()
@@ -194,7 +199,7 @@ class TestModels(unittest.TestCase):
             sales_contact_id="salesuser",
             total_amount=1000.0,
             amount_remaining=500.0,
-            status="Signed"
+            status="Signed",
         )
         result = contract.delete()
         self.assertTrue(result)
@@ -210,7 +215,7 @@ class TestModels(unittest.TestCase):
             event_date_end="2024-01-02",
             location="Test Location",
             attendees=50,
-            notes="Test Event"
+            notes="Test Event",
         )
         self.assertIsInstance(result, Event)
         self.assertEqual(result.location, "Test Location")
@@ -223,7 +228,7 @@ class TestModels(unittest.TestCase):
             event_date_end="2024-01-02",
             location="Test Location",
             attendees=50,
-            notes="Test Event"
+            notes="Test Event",
         )
         event.notes = "Updated Notes"
         result = event.update()
@@ -239,7 +244,7 @@ class TestModels(unittest.TestCase):
             event_date_end="2024-01-02",
             location="Test Location",
             attendees=50,
-            notes="Test Event"
+            notes="Test Event",
         )
         result = event.delete()
         self.assertTrue(result)
@@ -250,7 +255,7 @@ class TestModels(unittest.TestCase):
     def test_create_permission(self):
         self.cursor.execute(
             "INSERT INTO permissions (role_id, entity, action) VALUES (?, ?, ?)",
-            ("Management", "user", "create")
+            ("Management", "user", "create"),
         )
         self.conn.commit()
         permissions = Permission.get_permissions_by_role("Management")
@@ -260,11 +265,12 @@ class TestModels(unittest.TestCase):
     def test_has_permission(self):
         self.cursor.execute(
             "INSERT INTO permissions (role_id, entity, action) VALUES (?, ?, ?)",
-            ("Management", "user", "create")
+            ("Management", "user", "create"),
         )
         self.conn.commit()
         result = Permission.has_permission("Management", "user", "create")
         self.assertTrue(result)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

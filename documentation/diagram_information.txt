@@ -2,29 +2,62 @@ Ce diagramme illustre une base de données avec plusieurs éléments :
 
 - Les utilisateurs, leurs rôles et leurs permissions.
 - Les liens entre ces permissions et les clients, contrats, et événements (qui peut faire quoi).
- 
+
 Chaque utilisateur a un rôle (par exemple, Management (Gestion) ou Support) qui détermine ce qu’il peut faire :
 
-Gestion : peut créer, modifier et supprimer les contrats et les événements.
-Support : peut modifier les contrats et les événements, mais pas les créer ni les supprimer, ni gérer les clients.
-Commercial : gère les clients et leurs contrats, mais pas l’administration générale.
+Gestion :
+  - Peut créer, modifier et supprimer les contrats et les événements.
 
-Les permissions sont séparées, permettant par exemple d’implémenter un changement de rôle directement depuis la ligne de commande si besoin (cette fonction n'est pas demandé mais peut être insérer sous demande de la part de la société).
+Support :
+  - Peut modifier les contrats et les événements.
+  - Ne peut pas les créer ni les supprimer, ni gérer les clients.
 
-Roles : Chaque “role” (ex. “Management”, “Commercial”, “Support”) représente un niveau ou un type de fonction. Un utilisateur aura un seul role, qui déterminera ses droits et son champ d’action.
+Commercial :
+  - Gère les clients et leurs contrats.
+  - Ne gère pas l’administration générale.
 
-Users : Les utilisateurs sont ceux qui se connectent à l’application. Ils ont un identifiant (username), un mot de passe (stocké sous forme de hash), un rôle, et une adresse mail. On peut également associer un profil optionnel à chaque utilisateur pour stocker des informations supplémentaires comme la bio.
+Les permissions sont séparées, permettant par exemple :
+  - D’implémenter un changement de rôle directement depuis la ligne de commande si besoin.
+  - (Cette fonction n'est pas demandée mais peut être insérée sous demande de la part de la société).
 
-Permissions : Chaque permission indique ce qu’un role est autorisé à faire (actions comme “read” ou “edit” sur une “entity”). Ainsi, on sait précisément quels droits ont les utilisateurs en fonction de leur rôle.
+### Roles
+Chaque “role” (ex. “Management”, “Commercial”, “Support”) représente un niveau ou un type de fonction.  
+Un utilisateur aura un seul role, qui déterminera ses droits et son champ d’action.
 
-Clients : Ce sont les entités (entreprises ou particuliers) dont l’équipe de vente s’occupe. On y retrouve leurs coordonnées, le chargé de clientèle (sales_contact), etc.
+### Users
+Les utilisateurs sont ceux qui se connectent à l’application.  
+Ils ont :
+  - Un identifiant (username).
+  - Un mot de passe (stocké sous forme de hash).
+  - Un rôle.
+  - Une adresse mail.
+  
+On peut également associer un profil optionnel à chaque utilisateur pour stocker des informations supplémentaires comme la bio.
 
-Contracts : Un contrat lie un client à l’entreprise. Il précise le contact commercial (sales_contact), le statut, le montant total, et les détails de suivi (dates de création, montants restants…). Cela assure le lien entre le client et les événements.
+### Permissions
+Chaque permission indique ce qu’un role est autorisé à faire (actions comme “read” ou “edit” sur une “entity”).  
+Ainsi, on sait précisément quels droits ont les utilisateurs en fonction de leur rôle.
 
-Events : Un événement est associé à un contrat et implique un contact support (support_contact). On y stocke la durée totale (date de début/fin), le lieu, le nombre de participants, et diverses notes que l'utilisateur peut mentionner.
+### Clients
+Ce sont les entités (entreprises ou particuliers) dont l’équipe de vente s’occupe.  
+On y retrouve :
+  - Leurs coordonnées.
+  - Le chargé de clientèle (sales_contact), etc.
 
+### Contracts
+Un contrat lie un client à l’entreprise.  
+Il précise :
+  - Le contact commercial (sales_contact).
+  - Le statut.
+  - Le montant total.
+  - Les détails de suivi (dates de création, montants restants…).
+  
+Cela assure le lien entre le client et les événements.
 
-
-
-
-
+### Events
+Un événement est associé à un contrat et implique un contact support (support_contact).  
+On y stocke :
+  - La durée totale (date de début/fin).
+  - Le lieu.
+  - Le nombre de participants.
+  - Diverses notes que l'utilisateur peut mentionner.

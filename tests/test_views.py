@@ -17,7 +17,7 @@ from main.views import (
     display_users,
     display_clients,
     display_contracts,
-    display_events
+    display_events,
 )
 
 
@@ -37,12 +37,12 @@ class TestDisplayFunctions(unittest.TestCase):
         self.assertIn("Welcome to Epic Events CRM", output)
         self.assertIn("--------------------------", output)
 
-    @patch('builtins.input', return_value='test_user')
-    @patch('getpass.getpass', return_value='test_password')
+    @patch("builtins.input", return_value="test_user")
+    @patch("getpass.getpass", return_value="test_password")
     def test_display_login_prompt(self, mock_getpass, mock_input):
         username, password = display_login_prompt()
-        self.assertEqual(username, 'test_user')
-        self.assertEqual(password, 'test_password')
+        self.assertEqual(username, "test_user")
+        self.assertEqual(password, "test_password")
 
     def test_display_main_menu(self):
         options = {"1": "Option One", "2": "Option Two"}
@@ -52,13 +52,15 @@ class TestDisplayFunctions(unittest.TestCase):
         self.assertIn("1. Option One", output)
         self.assertIn("2. Option Two", output)
 
-    @patch('builtins.input', return_value='1')
+    @patch("builtins.input", return_value="1")
     def test_prompt_choice(self, mock_input):
         choice = prompt_choice()
-        self.assertEqual(choice, '1')
+        self.assertEqual(choice, "1")
 
     def test_display_profile(self):
-        mock_user = MagicMock(username="jdoe", email="jdoe@example.com", role_id="Commercial")
+        mock_user = MagicMock(
+            username="jdoe", email="jdoe@example.com", role_id="Commercial"
+        )
         display_profile(mock_user)
         output = self.mock_stdout.getvalue()
         self.assertIn("User Profile:", output)
@@ -66,17 +68,17 @@ class TestDisplayFunctions(unittest.TestCase):
         self.assertIn("Email: jdoe@example.com", output)
         self.assertIn("Role: Commercial", output)
 
-    @patch('builtins.input', return_value='test input')
+    @patch("builtins.input", return_value="test input")
     def test_prompt_input(self, mock_input):
         result = prompt_input("Enter something: ")
-        self.assertEqual(result, 'test input')
+        self.assertEqual(result, "test input")
 
-    @patch('builtins.input', return_value='yes')
+    @patch("builtins.input", return_value="yes")
     def test_confirm_action_yes(self, mock_input):
         result = confirm_action("delete this item")
         self.assertTrue(result)
 
-    @patch('builtins.input', return_value='no')
+    @patch("builtins.input", return_value="no")
     def test_confirm_action_no(self, mock_input):
         result = confirm_action("delete this item")
         self.assertFalse(result)
@@ -104,7 +106,7 @@ class TestDisplayFunctions(unittest.TestCase):
 
         users = [
             MockUser("user1", "user1@example.com", "Commercial"),
-            MockUser("user2", "user2@example.com", "Management")
+            MockUser("user2", "user2@example.com", "Management"),
         ]
         display_users(users)
         output = self.mock_stdout.getvalue()
@@ -130,7 +132,7 @@ class TestDisplayFunctions(unittest.TestCase):
                 "last_contact": "2024-01-01",
                 "sales_contact_id": "sales_user",
                 "created_at": "2024-01-01",
-                "updated_at": "2024-01-02"
+                "updated_at": "2024-01-02",
             }
         ]
         display_clients(clients)
@@ -157,7 +159,7 @@ class TestDisplayFunctions(unittest.TestCase):
                 "amount_remaining": 500,
                 "status": "Signed",
                 "created_at": "2024-01-01",
-                "updated_at": "2024-01-02"
+                "updated_at": "2024-01-02",
             }
         ]
         display_contracts(contracts, title="Test Contracts")
@@ -183,7 +185,7 @@ class TestDisplayFunctions(unittest.TestCase):
                 "attendees": 50,
                 "notes": "Test Event",
                 "created_at": "2024-01-01",
-                "updated_at": "2024-01-02"
+                "updated_at": "2024-01-02",
             }
         ]
         display_events(events, title="Test Events")
@@ -194,5 +196,5 @@ class TestDisplayFunctions(unittest.TestCase):
         self.assertIn("Test Event", output)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

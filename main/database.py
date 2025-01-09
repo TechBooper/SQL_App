@@ -22,7 +22,6 @@ logging.basicConfig(
 )
 
 
-
 def is_password_strong(password):
     if len(password) < 8:
         return False
@@ -33,6 +32,7 @@ def is_password_strong(password):
     if not any(char.islower() for char in password):
         return False
     return True
+
 
 def create_connection():
     """Create a database connection."""
@@ -45,6 +45,7 @@ def create_connection():
         logging.error(f"Database connection error: {e}")
         print(f"Database connection error: {e}")
         return None
+
 
 def create_tables_and_triggers(conn):
     try:
@@ -241,11 +242,13 @@ def create_tables_and_triggers(conn):
             os.remove(DATABASE_URL)
         sys.exit(1)
 
+
 def get_role_id(conn, role_name):
     cursor = conn.cursor()
     cursor.execute("SELECT name FROM roles WHERE name = ?", (role_name,))
     role = cursor.fetchone()
-    return role['name'] if role else None
+    return role["name"] if role else None
+
 
 def create_user(conn, username, password, role_id, email):
     password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
@@ -261,7 +264,9 @@ def create_user(conn, username, password, role_id, email):
         logging.info(f"User '{username}' created successfully with role '{role_id}'.")
         print(f"User '{username}' created with role '{role_id}'.")
     except sqlite3.IntegrityError as e:
-        logging.warning(f"User '{username}' or email '{email}' already exists. Error: {e}")
+        logging.warning(
+            f"User '{username}' or email '{email}' already exists. Error: {e}"
+        )
         print(f"User '{username}' or email '{email}' already exists.")
         conn.rollback()
         conn.close()
@@ -277,6 +282,7 @@ def create_user(conn, username, password, role_id, email):
             os.remove(DATABASE_URL)
         sys.exit(1)
 
+
 def initialize_database():
     if os.path.exists(DATABASE_URL):
         print("Database already exists. Initialization skipped.")
@@ -291,7 +297,9 @@ def initialize_database():
         if re.match(email_pattern, admin_email):
             break
         else:
-            print("Invalid email format. Please enter a valid email (e.g., user@example.com).")
+            print(
+                "Invalid email format. Please enter a valid email (e.g., user@example.com)."
+            )
 
     while True:
         admin_password = getpass.getpass("Enter admin password: ")
@@ -300,7 +308,9 @@ def initialize_database():
             print("Passwords do not match. Please try again.")
             continue
         if not is_password_strong(admin_password):
-            print("Password is not strong enough. It must be at least 8 characters long and include uppercase letters, lowercase letters, and numbers.")
+            print(
+                "Password is not strong enough. It must be at least 8 characters long and include uppercase letters, lowercase letters, and numbers."
+            )
             continue
         break
 
@@ -328,6 +338,7 @@ def initialize_database():
         if os.path.exists(DATABASE_URL):
             os.remove(DATABASE_URL)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     initialize_database()

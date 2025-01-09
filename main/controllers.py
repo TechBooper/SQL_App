@@ -10,8 +10,6 @@ logging.basicConfig(
 )
 
 
-
-
 def has_permission(username, entity, action, resource_owner_username=None):
     """Check if a user (identified by username) has permission to perform a certain action on an entity.
 
@@ -35,14 +33,16 @@ def has_permission(username, entity, action, resource_owner_username=None):
         return False
 
     # Debug logging
-    logging.debug(f"""
+    logging.debug(
+        f"""
         Permission check:
         Username: {username}
         Role: {role.name}
         Entity: {entity}
         Action: {action}
         Resource Owner: {resource_owner_username}
-    """)
+    """
+    )
 
     # Management role should have all permissions
     if role.name == "Management":
@@ -92,7 +92,7 @@ def create_client(username, first_name, last_name, email, phone, company_name):
         email=email,
         phone=phone,
         company_name=company_name,
-        sales_contact_id=username
+        sales_contact_id=username,
     )
 
     if isinstance(result, str):
@@ -107,14 +107,24 @@ def create_client(username, first_name, last_name, email, phone, company_name):
         return "An error occurred while creating the client."
 
 
-def update_client(username, client_email, first_name=None, last_name=None, email=None, phone=None, company_name=None):
+def update_client(
+    username,
+    client_email,
+    first_name=None,
+    last_name=None,
+    email=None,
+    phone=None,
+    company_name=None,
+):
     """Update an existing client's information."""
     client = Client.get_by_email(client_email)
     if not client:
         logging.warning(f"Client with email '{client_email}' not found.")
         return "Client not found."
 
-    if not has_permission(username, "client", "update", resource_owner_username=client.sales_contact_id):
+    if not has_permission(
+        username, "client", "update", resource_owner_username=client.sales_contact_id
+    ):
         return "Permission denied."
 
     if first_name:
@@ -146,7 +156,9 @@ def delete_client(username, client_email):
         logging.warning(f"Client with email '{client_email}' not found.")
         return "Client not found."
 
-    if not has_permission(username, "client", "delete", resource_owner_username=client.sales_contact_id):
+    if not has_permission(
+        username, "client", "delete", resource_owner_username=client.sales_contact_id
+    ):
         return "Permission denied."
 
     if client.delete():
@@ -190,14 +202,13 @@ def create_contract(username, client_email, total_amount, amount_remaining, stat
                 f"Error creating contract for client '{client_email}' by user '{username}'."
             )
             return "Error creating contract."
-        
+
     except sqlite3.IntegrityError as e:
         logging.error(f"IntegrityError message: {e}")
         error_msg = str(e)
         if "CHECK constraint failed: status" in error_msg:
             return "CHECK constraint failed: status IN ('Signed', 'Not Signed')"
         return "An error occurred while creating the contract."
-
 
 
 def update_contract(username, contract_id, total_amount, amount_remaining, status):
@@ -207,7 +218,12 @@ def update_contract(username, contract_id, total_amount, amount_remaining, statu
         logging.warning(f"Contract ID {contract_id} not found.")
         return "Contract not found."
 
-    if not has_permission(username, "contract", "update", resource_owner_username=contract.sales_contact_id):
+    if not has_permission(
+        username,
+        "contract",
+        "update",
+        resource_owner_username=contract.sales_contact_id,
+    ):
         return "Permission denied."
 
     contract.total_amount = total_amount
@@ -221,9 +237,7 @@ def update_contract(username, contract_id, total_amount, amount_remaining, statu
     elif isinstance(result, str):
         return result
     else:
-        logging.error(
-            f"Error updating contract ID {contract_id} by user '{username}'."
-        )
+        logging.error(f"Error updating contract ID {contract_id} by user '{username}'.")
         return "Error updating contract."
 
 
@@ -234,20 +248,25 @@ def delete_contract(username, contract_id):
         logging.warning(f"Contract ID {contract_id} not found.")
         return "Contract not found."
 
-    if not has_permission(username, "contract", "delete", resource_owner_username=contract.sales_contact_id):
+    if not has_permission(
+        username,
+        "contract",
+        "delete",
+        resource_owner_username=contract.sales_contact_id,
+    ):
         return "Permission denied."
 
     if contract.delete():
         logging.info(f"Contract ID {contract_id} deleted by user '{username}'.")
         return f"Contract ID {contract_id} deleted successfully."
     else:
-        logging.error(
-            f"Error deleting contract ID {contract_id} by user '{username}'."
-        )
+        logging.error(f"Error deleting contract ID {contract_id} by user '{username}'.")
         return "Error deleting contract."
 
 
-def create_event(username, contract_id, event_date_start, event_date_end, location, attendees, notes):
+def create_event(
+    username, contract_id, event_date_start, event_date_end, location, attendees, notes
+):
     """Create a new event associated with a contract."""
     contract = Contract.get_by_id(contract_id)
     if not contract or contract.status != "Signed":
@@ -261,7 +280,9 @@ def create_event(username, contract_id, event_date_start, event_date_end, locati
 
     resource_owner_username = client.sales_contact_id
 
-    if not has_permission(username, "event", "create", resource_owner_username=resource_owner_username):
+    if not has_permission(
+        username, "event", "create", resource_owner_username=resource_owner_username
+    ):
         return "Permission denied."
 
     result = Event.create(
@@ -300,7 +321,9 @@ def update_event(username, event_id, **kwargs):
     try:
         contract = Contract.get_by_id(event.contract_id)
         if not contract:
-            logging.warning(f"Contract ID {event.contract_id} not found for event {event_id}.")
+            logging.warning(
+                f"Contract ID {event.contract_id} not found for event {event_id}."
+            )
             return "Contract not found."
 
         client = Client.get_by_email(contract.client_id)
@@ -309,19 +332,23 @@ def update_event(username, event_id, **kwargs):
             return "Client not found."
 
         resource_owner_username = client.sales_contact_id
-        
+
         # Add debug logging
-        logging.debug(f"""
+        logging.debug(
+            f"""
             Update event check:
             Username: {username}
             Event ID: {event_id}
             Resource Owner: {resource_owner_username}
             Contract ID: {contract.id}
             Client Email: {client.email}
-        """)
+        """
+        )
 
         # Check permissions
-        if not has_permission(username, "event", "update", resource_owner_username=resource_owner_username):
+        if not has_permission(
+            username, "event", "update", resource_owner_username=resource_owner_username
+        ):
             return "Permission denied."
 
         # Update event fields
@@ -333,7 +360,9 @@ def update_event(username, event_id, **kwargs):
 
         result = event.update()
         if result is True:
-            logging.info(f"Event ID {event_id} updated successfully by user '{username}'.")
+            logging.info(
+                f"Event ID {event_id} updated successfully by user '{username}'."
+            )
             return f"Event ID {event_id} updated successfully."
         elif isinstance(result, str):
             logging.error(f"Update failed with message: {result}")
@@ -356,7 +385,9 @@ def delete_event(username, event_id):
 
     contract = Contract.get_by_id(event.contract_id)
     if not contract:
-        logging.warning(f"Contract ID {event.contract_id} not found for event {event_id}.")
+        logging.warning(
+            f"Contract ID {event.contract_id} not found for event {event_id}."
+        )
         return "Contract not found."
 
     client = Client.get_by_email(contract.client_id)
@@ -366,7 +397,9 @@ def delete_event(username, event_id):
 
     resource_owner_username = client.sales_contact_id
 
-    if not has_permission(username, "event", "delete", resource_owner_username=resource_owner_username):
+    if not has_permission(
+        username, "event", "delete", resource_owner_username=resource_owner_username
+    ):
         return "Permission denied."
 
     if event.delete():
@@ -409,7 +442,9 @@ def create_user(admin_username, username, password, role_name, email):
     if not has_permission(admin_username, "user", "create"):
         return "Permission denied."
 
-    result = User.create(username=username, password=password, role_id=role_name, email=email)
+    result = User.create(
+        username=username, password=password, role_id=role_name, email=email
+    )
 
     if isinstance(result, str):
         return result
@@ -417,11 +452,20 @@ def create_user(admin_username, username, password, role_name, email):
         logging.info(f"User '{username}' created by admin user '{admin_username}'.")
         return f"User '{username}' created successfully."
     else:
-        logging.error(f"Error creating user '{username}' by admin user '{admin_username}'.")
+        logging.error(
+            f"Error creating user '{username}' by admin user '{admin_username}'."
+        )
         return "Error creating user."
 
 
-def update_user(admin_username, username, new_username=None, password=None, role_name=None, email=None):
+def update_user(
+    admin_username,
+    username,
+    new_username=None,
+    password=None,
+    role_name=None,
+    email=None,
+):
     """Update an existing user's information."""
     # First check if user exists
     user = User.get_by_username(username)
@@ -457,6 +501,7 @@ def update_user(admin_username, username, new_username=None, password=None, role
             f"Error updating user '{username}' by admin user '{admin_username}'."
         )
         return "Error updating user."
+
 
 def delete_user(admin_username, username):
     """Delete a user."""
@@ -537,9 +582,7 @@ def get_all_events(username):
 
         role = Role.get_by_name(user.role_id)
         if not role:
-            logging.error(
-                f"Role '{user.role_id}' not found for user '{username}'."
-            )
+            logging.error(f"Role '{user.role_id}' not found for user '{username}'.")
             return []
 
         with Database.connect() as conn:

@@ -2,7 +2,6 @@ import getpass
 from tabulate import tabulate
 
 
-
 def display_welcome_message():
     """Displays the welcome message to the user."""
     print("Welcome to Epic Events CRM")

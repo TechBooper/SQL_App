@@ -49,7 +49,6 @@ from main.configs import sentry_setup
 from main.database import create_connection
 
 
-
 logging.basicConfig(
     filename="cli.log",
     level=logging.INFO,
@@ -62,11 +61,13 @@ DATABASE_URL = os.path.join(DATABASE_FOLDER, "app.db")
 
 
 def display_sub_menu(title, options):
-    """Displays a sub-menu based on available options.
+    """
+    Displays a sub-menu with a given title and a dictionary of options.
 
     Args:
         title (str): The title of the sub-menu.
-        options (dict): Menu options to display.
+        options (dict): Dictionary where keys are option numbers (as strings),
+                        and values are the corresponding option labels.
     """
     print(f"\n{title}:")
     for key in sorted(options.keys(), key=int):
@@ -74,11 +75,17 @@ def display_sub_menu(title, options):
 
 
 def main():
+    """
+    Main entry point for the CLI application.
+
+    1. Connects to the database.
+    2. Displays a welcome message.
+    3. Prompts the user to log in.
+    4. Starts an interactive session if authentication is successful.
+    """
     conn = create_connection()
     if conn is None:
-        print(
-            "Database connection failed. Please ensure the database is initialized."
-        )
+        print("Database connection failed. Please ensure the database is initialized.")
         return 1
 
     session = {}
@@ -89,7 +96,9 @@ def main():
         if user_info:
             session["username"] = user_info["username"]
             session["role"] = user_info["role_id"]
-            print(f"\nLogged in as {session['username']} with role {session['role']}.\n")
+            print(
+                f"\nLogged in as {session['username']} with role {session['role']}.\n"
+            )
             interactive_session(session)
             break
         else:
@@ -97,6 +106,12 @@ def main():
 
 
 def interactive_session(session):
+    """
+    Presents the main menu loop for a logged-in user.
+
+    Args:
+        session (dict): A dictionary containing the username and role of the user.
+    """
     while True:
         options = build_main_menu_options(session)
         display_main_menu(options)
@@ -127,13 +142,24 @@ def interactive_session(session):
 
 
 def build_main_menu_options(session):
+    """
+    Builds and returns a dictionary of main menu options based on the user's role/permissions.
+
+    Args:
+        session (dict): A dictionary with keys 'username' and 'role'.
+
+    Returns:
+        dict: A dictionary of option numbers (as strings) to option labels.
+    """
     options = {
         "1": "View Profile",
         "2": "Update Email",
     }
     option_number = 3
 
-    if has_permission(session["role"], "user", "read") or has_any_user_management_permission(session):
+    if has_permission(
+        session["role"], "user", "read"
+    ) or has_any_user_management_permission(session):
         options[str(option_number)] = "Manage Users"
         option_number += 1
 
@@ -154,6 +180,12 @@ def build_main_menu_options(session):
 
 
 def handle_view_profile(session):
+    """
+    Fetches and displays the profile of the currently logged-in user.
+
+    Args:
+        session (dict): Contains the current user's details such as username.
+    """
     user = User.get_by_username(session["username"])
     if user:
         display_profile(user)
@@ -162,6 +194,13 @@ def handle_view_profile(session):
 
 
 def handle_update_email(session):
+    """
+    Prompts the user to update their email address, validates the format, and
+    updates the user's record in the database.
+
+    Args:
+        session (dict): Contains the current user's details such as username.
+    """
     print("\nUpdate Email:")
     email_pattern = r"^[^@]+@[^@]+\.[^@]+$"
 
@@ -179,18 +218,40 @@ def handle_update_email(session):
                 print("User not found.\n")
             break
         else:
-            print("Invalid email format. Please enter a valid email (e.g., user@example.com).")
+            print(
+                "Invalid email format. Please enter a valid email (e.g., user@example.com)."
+            )
+
 
 def has_any_user_management_permission(session):
+    """
+    Checks if the current user (by role) has any of the create, update, or delete
+    permissions for the 'user' resource.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+
+    Returns:
+        bool: True if the user has any user-management permission, False otherwise.
+    """
     return (
-        has_permission(session["role"], "user", "create") or
-        has_permission(session["role"], "user", "update") or
-        has_permission(session["role"], "user", "delete")
+        has_permission(session["role"], "user", "create")
+        or has_permission(session["role"], "user", "update")
+        or has_permission(session["role"], "user", "delete")
     )
 
 
 def manage_users(session):
-    if has_permission(session["role"], "user", "read") or has_any_user_management_permission(session):
+    """
+    Entry point for the "Manage Users" sub-menu. Based on the user's choice, it
+    calls the corresponding handler (view, create, update, delete).
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
+    if has_permission(
+        session["role"], "user", "read"
+    ) or has_any_user_management_permission(session):
         while True:
             options = build_manage_users_options(session)
             display_sub_menu("Manage Users", options)
@@ -217,6 +278,16 @@ def manage_users(session):
 
 
 def build_manage_users_options(session):
+    """
+    Constructs and returns a dictionary of user-management sub-menu options
+    based on the user's permissions.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+
+    Returns:
+        dict: A dictionary of option numbers (as strings) to option labels.
+    """
     options = {}
     option_number = 1
 
@@ -241,11 +312,24 @@ def build_manage_users_options(session):
 
 
 def handle_view_users(session):
+    """
+    Fetches and displays all users from the system.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     users = get_all_users()
     display_users(users)
 
 
 def handle_create_user(session):
+    """
+    Prompts the user for new-user details, including username, email, password, and role,
+    then calls the controller to create the user.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     print("\nCreate User:")
     username = prompt_input("Enter username: ")
     email = prompt_input("Enter email: ")
@@ -254,7 +338,9 @@ def handle_create_user(session):
     if password != confirm_password:
         print("Passwords do not match.\n")
         return
-    role_name = prompt_input("Enter role name (e.g., 'Management', 'Commercial', 'Support'): ").strip()
+    role_name = prompt_input(
+        "Enter role name (e.g., 'Management', 'Commercial', 'Support'): "
+    ).strip()
     result = create_user(
         admin_username=session["username"],
         username=username,
@@ -266,6 +352,13 @@ def handle_create_user(session):
 
 
 def handle_update_user(session):
+    """
+    Prompts for details to update an existing user (username, email, password, role).
+    Calls the controller to perform the update.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     print("\nUpdate User:")
     old_username = prompt_input("Enter the username of the user to update: ")
     new_username = prompt_input("Enter new username: ")
@@ -277,7 +370,9 @@ def handle_update_user(session):
         if password != confirm_password:
             print("Passwords do not match.\n")
             return
-    role_name = prompt_input("Enter new role name (Management, Commercial, Support): ").strip()
+    role_name = prompt_input(
+        "Enter new role name (Management, Commercial, Support): "
+    ).strip()
 
     if not password:
         password = None
@@ -294,6 +389,12 @@ def handle_update_user(session):
 
 
 def handle_delete_user(session):
+    """
+    Prompts for a username to delete, confirms the action, and calls the controller to delete the user.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     print("\nDelete User:")
     del_username = prompt_input("Enter username of the user to delete: ")
     confirm = confirm_action("delete this user")
@@ -305,6 +406,13 @@ def handle_delete_user(session):
 
 
 def manage_clients(session):
+    """
+    Entry point for the "Manage Clients" sub-menu. Based on the user's choice,
+    calls the corresponding handler (view, create, update, delete).
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     if has_permission(session["role"], "client", "read"):
         while True:
             options = build_manage_clients_options(session)
@@ -316,7 +424,7 @@ def manage_clients(session):
                 if selection == "View Clients":
                     handle_view_clients(session)
                 elif selection == "Create Client":
-                    handle_create_client(session)  # This one is already correct
+                    handle_create_client(session)
                 elif selection == "Update Client":
                     handle_update_client(session)
                 elif selection == "Delete Client":
@@ -332,6 +440,16 @@ def manage_clients(session):
 
 
 def build_manage_clients_options(session):
+    """
+    Constructs and returns a dictionary of client-management sub-menu options
+    based on the user's permissions.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+
+    Returns:
+        dict: A dictionary of option numbers (as strings) to option labels.
+    """
     options = {"1": "View Clients"}
     option_number = 2
 
@@ -352,11 +470,24 @@ def build_manage_clients_options(session):
 
 
 def handle_view_clients(session):
+    """
+    Fetches and displays all clients.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     clients = get_all_clients()
     display_clients(clients)
 
 
 def handle_create_client(session):
+    """
+    Prompts for client details (first name, last name, email, phone, company name)
+    and calls the controller to create a new client record.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     print("\nCreate Client:")
     first_name = prompt_input("Enter first name: ")
     last_name = prompt_input("Enter last name: ")
@@ -369,12 +500,19 @@ def handle_create_client(session):
         last_name=last_name,
         email=email,
         phone=phone,
-        company_name=company_name
+        company_name=company_name,
     )
     print(f"{result}\n")
 
 
 def handle_update_client(session):
+    """
+    Prompts for a client's email and new details, then updates the client's record
+    via the corresponding controller function.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     print("\nUpdate Client:")
     client_email = prompt_input("Enter client email to update: ")
     first_name = prompt_input("Enter new first name: ")
@@ -384,7 +522,7 @@ def handle_update_client(session):
     company_name = prompt_input("Enter new company name: ")
     result = update_client(
         username=session["username"],
-        client_id=client_email,
+        client_email=client_email,
         first_name=first_name,
         last_name=last_name,
         email=new_email,
@@ -395,17 +533,31 @@ def handle_update_client(session):
 
 
 def handle_delete_client(session):
+    """
+    Prompts for a client's email, confirms the action, and calls the controller
+    to delete the client record.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     print("\nDelete Client:")
     client_email = prompt_input("Enter client email to delete: ")
     confirm = confirm_action("delete this client")
     if confirm:
-        result = delete_client(username=session["username"], client_id=client_email)
+        result = delete_client(username=session["username"], client_email=client_email)
         print(f"{result}\n")
     else:
         print("Deletion cancelled.\n")
 
 
 def manage_contracts(session):
+    """
+    Entry point for the "Manage Contracts" sub-menu. Based on the user's choice,
+    calls the corresponding handler (view, create, update, delete, filter).
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     if has_permission(session["role"], "contract", "read"):
         while True:
             options = build_manage_contracts_options(session)
@@ -435,6 +587,16 @@ def manage_contracts(session):
 
 
 def build_manage_contracts_options(session):
+    """
+    Constructs and returns a dictionary of contract-management sub-menu options
+    based on the user's permissions.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+
+    Returns:
+        dict: A dictionary of option numbers (as strings) to option labels.
+    """
     options = {"1": "View Contracts"}
     option_number = 2
 
@@ -458,11 +620,24 @@ def build_manage_contracts_options(session):
 
 
 def handle_view_contracts(session):
+    """
+    Fetches and displays all contracts.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     contracts = get_all_contracts()
     display_contracts(contracts)
 
 
 def handle_create_contract(session):
+    """
+    Prompts for contract creation details (client email, total amount, amount remaining, status)
+    and calls the controller function to create a new contract.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     print("\nCreate Contract:")
     client_email = prompt_input("Enter client email: ")
     total_amount_input = prompt_input("Enter total amount: ")
@@ -483,7 +658,7 @@ def handle_create_contract(session):
         if status:
             result = create_contract(
                 username=session["username"],
-                client_id=client_email,
+                client_email=client_email,
                 total_amount=total_amount,
                 amount_remaining=amount_remaining,
                 status=status,
@@ -496,6 +671,13 @@ def handle_create_contract(session):
 
 
 def handle_update_contract(session):
+    """
+    Prompts for a contract ID, new amounts, and a new status, then updates the contract
+    via the controller function.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     print("\nUpdate Contract:")
     contract_id_input = prompt_input("Enter contract ID to update: ")
     total_amount_input = prompt_input("Enter new total amount: ")
@@ -530,6 +712,13 @@ def handle_update_contract(session):
 
 
 def handle_delete_contract(session):
+    """
+    Prompts for a contract ID, confirms the deletion, and calls the controller function
+    to delete the contract.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     print("\nDelete Contract:")
     contract_id_input = prompt_input("Enter contract ID to delete: ")
     confirm = confirm_action("delete this contract")
@@ -547,6 +736,13 @@ def handle_delete_contract(session):
 
 
 def handle_filter_contracts(session):
+    """
+    Prompts the user to select a contract status (Signed/Not Signed), then displays
+    a list of contracts filtered by that status.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     print("\nFilter Contracts by Status:")
     print("Select contract status to filter:")
     print("1. Signed")
@@ -567,6 +763,13 @@ def handle_filter_contracts(session):
 
 
 def manage_events(session):
+    """
+    Entry point for the "Manage Events" sub-menu. Based on the user's choice,
+    calls the corresponding handler (view, create, update, delete, assign, filters).
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     if has_permission(session["role"], "event", "read"):
         while True:
             options = build_manage_events_options(session)
@@ -600,6 +803,16 @@ def manage_events(session):
 
 
 def build_manage_events_options(session):
+    """
+    Constructs and returns a dictionary of event-management sub-menu options
+    based on the user's permissions and role.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+
+    Returns:
+        dict: A dictionary of option numbers (as strings) to option labels.
+    """
     options = {"1": "View Events"}
     option_number = 2
 
@@ -630,17 +843,33 @@ def build_manage_events_options(session):
 
 
 def handle_view_events(session):
+    """
+    Displays events. If the user role is "Support", filters events for the support user;
+    otherwise, shows all events.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     if session["role"] == "Support":
         events = filter_events_by_support_user(session["username"])
     else:
         events = get_all_events(session["username"])
     display_events(
         events,
-        title=("Events Assigned to You" if session["role"] == "Support" else "Events List"),
+        title=(
+            "Events Assigned to You" if session["role"] == "Support" else "Events List"
+        ),
     )
 
 
 def handle_create_event(session):
+    """
+    Prompts for a contract ID and event details (start date, end date, location, attendees, notes),
+    then calls the controller to create the event.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     print("\nCreate Event:")
     contract_id_input = prompt_input("Enter contract ID: ")
     event_date_start = prompt_input("Enter event start date (YYYY-MM-DD): ")
@@ -666,6 +895,12 @@ def handle_create_event(session):
 
 
 def handle_update_event(session):
+    """
+    Prompts for an event ID and new details (date, location, attendees, notes) to update the event.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     print("\nUpdate Event:")
     event_id_input = prompt_input("Enter event ID to update: ")
     event_date_start = prompt_input("Enter new event start date (YYYY-MM-DD): ")
@@ -691,6 +926,12 @@ def handle_update_event(session):
 
 
 def handle_delete_event(session):
+    """
+    Prompts for an event ID, confirms the action, and calls the controller to delete the event.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     print("\nDelete Event:")
     event_id_input = prompt_input("Enter event ID to delete: ")
     confirm = confirm_action("delete this event")
@@ -706,6 +947,13 @@ def handle_delete_event(session):
 
 
 def handle_assign_support(session):
+    """
+    Prompts for an event ID and a support user's username, then calls the controller
+    to assign that support user to the event.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     print("\nAssign Support to Event:")
     event_id_input = prompt_input("Enter event ID: ")
     support_user_username = prompt_input("Enter support user username to assign: ")
@@ -722,11 +970,23 @@ def handle_assign_support(session):
 
 
 def handle_filter_events_unassigned(session):
+    """
+    Fetches and displays all events that have no support user assigned.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     events = filter_events_unassigned()
     display_events(events, title="Unassigned Events")
 
 
 def handle_filter_events_assigned_to_me(session):
+    """
+    Fetches and displays all events that are assigned to the current support user.
+
+    Args:
+        session (dict): Contains the current user's details such as username and role.
+    """
     events = filter_events_by_support_user(session["username"])
     display_events(events, title="Events Assigned to You")
 

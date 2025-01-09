@@ -94,7 +94,7 @@ class UserRepository:
     @staticmethod
     def update_user(user_obj, new_password=None):
         """
-        Updates the User record in DB. 
+        Updates the User record in DB.
         Returns True on success, or an error message / False on failure.
         """
         try:
@@ -135,7 +135,7 @@ class UserRepository:
     @staticmethod
     def delete_user(user_obj):
         """
-        Deletes a User from the DB. 
+        Deletes a User from the DB.
         Returns True on success, or False on DB error.
         """
         try:
@@ -190,7 +190,9 @@ class RoleRepository:
 
 class ClientRepository:
     @staticmethod
-    def create_client(first_name, last_name, email, phone, company_name, sales_contact_id):
+    def create_client(
+        first_name, last_name, email, phone, company_name, sales_contact_id
+    ):
         """
         Creates a Client in the DB. Returns the new Client or an error message.
         """
@@ -203,14 +205,23 @@ class ClientRepository:
                     (first_name, last_name, email, phone, company_name, sales_contact_id)
                     VALUES (?, ?, ?, ?, ?, ?)
                     """,
-                    (first_name, last_name, email, phone, company_name, sales_contact_id),
+                    (
+                        first_name,
+                        last_name,
+                        email,
+                        phone,
+                        company_name,
+                        sales_contact_id,
+                    ),
                 )
                 conn.commit()
                 return ClientRepository.get_client_by_email(email)
         except sqlite3.IntegrityError as e:
             logging.error(f"Integrity error in ClientRepository.create_client: {e}")
             # Adjust the message as per your business logic
-            return "A client with this first name, last name, and company already exists."
+            return (
+                "A client with this first name, last name, and company already exists."
+            )
         except sqlite3.Error as e:
             logging.error(f"Database error in ClientRepository.create_client: {e}")
             return None
@@ -229,7 +240,9 @@ class ClientRepository:
                 return Client(**dict(row))
             return None
         except sqlite3.Error as e:
-            logging.error(f"Database error in ClientRepository.get_client_by_email: {e}")
+            logging.error(
+                f"Database error in ClientRepository.get_client_by_email: {e}"
+            )
             return None
         finally:
             if conn:
@@ -250,7 +263,12 @@ class ClientRepository:
                     WHERE first_name = ? AND last_name = ? AND company_name = ?
                           AND email != ?
                     """,
-                    (client_obj.first_name, client_obj.last_name, client_obj.company_name, client_obj.email),
+                    (
+                        client_obj.first_name,
+                        client_obj.last_name,
+                        client_obj.company_name,
+                        client_obj.email,
+                    ),
                 )
                 existing = cursor.fetchone()
                 if existing:
@@ -293,7 +311,9 @@ class ClientRepository:
         try:
             with Database.connect() as conn:
                 cursor = conn.cursor()
-                cursor.execute("DELETE FROM clients WHERE email = ?", (client_obj.email,))
+                cursor.execute(
+                    "DELETE FROM clients WHERE email = ?", (client_obj.email,)
+                )
                 conn.commit()
                 logging.info(f"Client {client_obj.email} deleted.")
                 return True
@@ -304,12 +324,14 @@ class ClientRepository:
 
 class ContractRepository:
     @staticmethod
-    def create_contract(client_id, sales_contact_id, total_amount, amount_remaining, status):
+    def create_contract(
+        client_id, sales_contact_id, total_amount, amount_remaining, status
+    ):
         """
         Creates a new Contract. Returns the Contract or an error message.
         """
         try:
-            if status not in ('Signed', 'Not Signed'):
+            if status not in ("Signed", "Not Signed"):
                 return "CHECK constraint failed: status IN ('Signed', 'Not Signed')"
             with Database.connect() as conn:
                 cursor = conn.cursor()
@@ -319,7 +341,13 @@ class ContractRepository:
                     (client_id, sales_contact_id, total_amount, amount_remaining, status)
                     VALUES (?, ?, ?, ?, ?)
                     """,
-                    (client_id, sales_contact_id, total_amount, amount_remaining, status),
+                    (
+                        client_id,
+                        sales_contact_id,
+                        total_amount,
+                        amount_remaining,
+                        status,
+                    ),
                 )
                 conn.commit()
                 contract_id = cursor.lastrowid
@@ -345,7 +373,9 @@ class ContractRepository:
                 return Contract(**dict(row))
             return None
         except sqlite3.Error as e:
-            logging.error(f"Database error in ContractRepository.get_contract_by_id: {e}")
+            logging.error(
+                f"Database error in ContractRepository.get_contract_by_id: {e}"
+            )
             return None
         finally:
             if conn:
@@ -405,7 +435,15 @@ class ContractRepository:
 
 class EventRepository:
     @staticmethod
-    def create_event(contract_id, support_contact_id, event_date_start, event_date_end, location, attendees, notes):
+    def create_event(
+        contract_id,
+        support_contact_id,
+        event_date_start,
+        event_date_end,
+        location,
+        attendees,
+        notes,
+    ):
         """
         Creates a new Event. Returns the Event or an error message / None on error.
         """
@@ -529,7 +567,9 @@ class PermissionRepository:
             cursor.execute("SELECT * FROM permissions WHERE role_id = ?", (role_name,))
             return [Permission(**dict(row)) for row in cursor.fetchall()]
         except sqlite3.Error as e:
-            logging.error(f"Database error in PermissionRepository.get_permissions_by_role: {e}")
+            logging.error(
+                f"Database error in PermissionRepository.get_permissions_by_role: {e}"
+            )
             return []
         finally:
             if conn:
