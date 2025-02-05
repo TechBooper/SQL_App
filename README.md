@@ -29,16 +29,10 @@ This is a Command-Line Interface (CLI) application for managing customer relatio
 
 Windows Users have to use this command in the folder's directory: `venv\Scripts\activate`
 
-=======
-=======
-
 - Windows
 
 `python -m venv venv`
 `venv\Scripts\activate`
-
-=======
-
 
 2. Install Dependencies
 
